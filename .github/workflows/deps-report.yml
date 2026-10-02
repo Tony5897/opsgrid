@@ -1,0 +1,37 @@
+name: Dependency report
+
+# Reports available upgrades as a single tracking issue. Upgrades are applied
+# and committed by the maintainer, never by automation (ADR-022).
+on:
+  schedule:
+    - cron: "0 14 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+      - run: pnpm install --frozen-lockfile
+      - name: Build report
+        env:
+          GOTOOLCHAIN: local
+        run: ./scripts/deps-report.sh > report.md
+      - name: Create or update the tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="Dependency report"
+          number=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')
+          if [ -n "$number" ]; then gh issue edit "$number" --body-file report.md
+          else gh issue create --title "$title" --body-file report.md --label dependencies || gh issue create --title "$title" --body-file report.md
+          fi

@@ -1,0 +1,17 @@
+# gitleaks configuration: default rules plus a narrow allowlist for the
+# LOCAL-DEVELOPMENT defaults that are intentionally committed (each is
+# documented in .env.example and only works against the local Compose stack).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local development defaults (not secrets)"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)compose\.yaml$''',
+  '''(^|/)infra/keycloak/realm-opsgrid\.json$''',
+  '''(^|/)infra/garage/garage\.toml$''',
+  '''(^|/)test/spikes/s3-compat/''',
+  '''(^|/)internal/platform/database/dbtest/dbtest\.go$''',
+  '''(^|/)pnpm-lock\.yaml$''',
+]

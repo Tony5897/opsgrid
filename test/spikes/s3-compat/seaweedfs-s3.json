@@ -2,7 +2,12 @@
   "identities": [
     {
       "name": "spike",
-      "credentials": [{ "accessKey": "GK0123456789abcdef01234567", "secretKey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }],
+      "credentials": [
+        {
+          "accessKey": "GK0123456789abcdef01234567",
+          "secretKey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
       "actions": ["Admin", "Read", "Write", "List", "Tagging"]
     }
   ]

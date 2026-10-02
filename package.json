@@ -13,10 +13,12 @@
     "test": "pnpm -r test",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "generate": "pnpm --filter @opsgrid/api-client generate"
+    "generate": "pnpm --filter @opsgrid/api-client generate",
+    "lint:api": "redocly lint api/openapi.yaml"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@redocly/cli": "2.57.0",
     "squawk-cli": "2.66.0"
   }
 }

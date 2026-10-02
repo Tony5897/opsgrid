@@ -1,0 +1,10 @@
+# Redocly lint rules for api/openapi.yaml (CI: contract job).
+extends:
+  - recommended
+rules:
+  operation-operationId: error
+  operation-summary: error
+  operation-4xx-response: off # covered by the shared `default` problem response
+  no-server-example.com: error
+  security-defined: off # authentication arrives in Gate 1
+  info-license-strict: off

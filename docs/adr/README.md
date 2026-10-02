@@ -25,3 +25,4 @@ Format: MADR-style ([template](000-template.md)). Number decisions sequentially 
 | [019](019-csrf-defense.md) | CSRF defense in depth | Accepted |
 | [020](020-spa-served-by-bff.md) | The Go API serves the built SPA (same origin) | Accepted |
 | [021](021-cloudevents-envelope.md) | CloudEvents 1.0 envelope for internal events | Accepted |
+| [022](022-humans-commit-automation-reports.md) | Humans commit, automation reports | Accepted |

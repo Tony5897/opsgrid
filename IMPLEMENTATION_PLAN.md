@@ -56,7 +56,7 @@ Commit the planning artifacts before any code, so that the repo itself carries t
 
 - **Pinned via `mise.toml`:** Go 1.27.x, Node 24 LTS, pnpm 12.x. Go dev tools are pinned with the **`tool` directive in `go.mod`** (`go tool sqlc`, `go tool oapi-codegen`, `go tool goose`, `go tool golangci-lint`), with no global installs.
 - **Containers pinned by digest:** `postgres:18.6`, `redis:8.10`, `quay.io/keycloak/keycloak:26.7.4`, `otel/opentelemetry-collector-contrib`, `prom/prometheus`, `grafana/tempo`, `grafana/loki`, `grafana/grafana`, `axllent/mailpit`, `ghcr.io/shopify/toxiproxy`, plus the S3 server from ADR-017.
-- **Renovate** keeps everything current: grouped weekly PRs, digest pinning, auto-merge only for patch-level dev deps with green CI.
+- **Dependency upgrades** are reported weekly (a tracking issue plus `make deps`) and applied by the maintainer. No bot commits or PRs (ADR-022).
 - **Go libraries:** `jackc/pgx/v5` (+pgxpool), `sqlc`, `pressly/goose/v3` (SQL migrations, embedded), `redis/go-redis/v9`, `coder/websocket`, `coreos/go-oidc/v3` + `x/oauth2`, `oapi-codegen` (strict server, std-http), `aws-sdk-go-v2/s3` (presign; works with R2), `go.opentelemetry.io/otel` + `otelhttp` + `otelpgx` + `redisotel`, `johnfercher/maroto/v2` (PDF), `pgregory.net/rapid` (property tests), `testcontainers-go`, `stretchr/testify` (assert only), `go-faker/faker` (seeded).
 - **Analysis:** golangci-lint v2 (`govet, staticcheck, errcheck, errorlint, gosec, revive, bodyclose, sqlclosecheck, noctx, contextcheck, exhaustive, depguard, gocritic`), `govulncheck`, **squawk** (Postgres migration safety linter), Redocly CLI (OpenAPI lint), **oasdiff** (breaking-change gate).
 
@@ -347,9 +347,9 @@ Semantic landmarks, skip link, focus moves to the `h1` on route change, visible 
 - **PR workflow** (parallel jobs, `concurrency` cancel-in-progress, actions **pinned by SHA**, `permissions: read-all` by default):
   `go-lint` · `go-test` (unit + `-race`) · `go-fuzz-smoke` (30s per target) · `web-lint-typecheck` · `web-test` · `contract` (Redocly lint, codegen diff, oasdiff) · `migrations` (empty→head, prev-release-snapshot→head, squawk, schema invariants) · `integration` (services: postgres, redis) · `e2e` (Compose up, Playwright, upload traces/videos on failure) · `security` (govulncheck, osv-scanner on pnpm-lock, gitleaks, CodeQL go+ts) · `image` (build, Trivy scan, fail on HIGH/CRITICAL with fix available) · `lighthouse`.
 - **Required checks** on `main`, CODEOWNERS, linear history, signed commits encouraged.
-- **Main/release:** build multi-arch distroless `nonroot` images tagged by SHA → SBOM (syft) → **cosign keyless sign** → `actions/attest-build-provenance` (SLSA) → push GHCR. release-please produces the changelog + semver tags.
+- **Main/release:** build multi-arch distroless `nonroot` images tagged by SHA → SBOM (syft) → **cosign keyless sign** → `actions/attest-build-provenance` (SLSA) → push GHCR. Releases are tagged manually from Conventional Commit history (ADR-022).
 - **Deploy (demo):** manual `environment: demo` approval gate → migration job → deploy → smoke tests (`/readyz`, login round-trip, WS connect). Destructive migrations require a separate approval.
-- OpenSSF Scorecard workflow, Dependabot security alerts, Renovate for updates.
+- OpenSSF Scorecard workflow, GitHub security alerts, and a weekly dependency report issue (no bot commits, ADR-022).
 - Dockerfile: multi-stage, `CGO_ENABLED=0`, `-trimpath -ldflags "-s -w -X version=$SHA"`, `USER nonroot`, read-only root FS in Compose, healthcheck.
 
 ---
@@ -429,7 +429,7 @@ WP: polished demo seed (realistic names, history, photos), README in the overvie
 | Redis Streams retry/claim subtleties | M/H | §4.9 explicit algorithm + failure tests with failpoints |
 | Laptop resource pressure | M/M | Compose profiles; `make doctor` checks Docker memory; observability off by default |
 | Accessible DnD complexity | M/M | Keyboard Assign dialog is the primary path built first; DnD is the enhancement |
-| Version drift (Oct 2026 vs later) | H/L | Renovate + digest pins + `make doctor` |
+| Version drift (Oct 2026 vs later) | H/L | Weekly dependency report (ADR-022) + pinned versions + `make doctor` |
 | Free-tier changes | M/L | Local Compose is canonical; public demo is optional |
 
 ---

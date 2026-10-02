@@ -33,8 +33,10 @@ export default defineConfig({
   build: {
     target: "es2023",
     sourcemap: true,
-    // Route chunks keep the initial bundle small (budget: <=180 KB gzip).
-    chunkSizeWarningLimit: 250,
+    manifest: true, // read by scripts/check-bundle-budget.mjs
+    // The real budget (<=180 KB gzip initial JS) is enforced by
+    // scripts/check-bundle-budget.mjs; this raw-size warning would be noise.
+    chunkSizeWarningLimit: 800,
   },
   test: {
     projects: [
