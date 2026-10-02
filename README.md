@@ -2,7 +2,7 @@
 
 A multi-tenant, real-time field-operations platform, built to explore relational isolation, transactional correctness, asynchronous delivery, realtime synchronization, observability and production failure handling.
 
-> **Status:** Gate 0 (Foundation), in active development. Each capability below is listed with the gate that will prove it. Claims are linked to evidence only once proven; see the [evidence ledger](docs/evidence/ledger.md).
+> **Status:** Gate 0 (Foundation) complete; Gate 1 (identity and tenancy) next. Each capability below is listed with the gate that will prove it. Claims are linked to evidence only once proven; see the [evidence ledger](docs/evidence/ledger.md).
 
 ## What it does
 
@@ -25,19 +25,32 @@ Dispatchers drag work orders onto technicians' schedules on a live board. The da
 
 ## Stack
 
-Go 1.27 · PostgreSQL 18 · Redis 8 · Keycloak (OIDC, BFF sessions) · React 19 + TypeScript · TanStack Router/Query · Tailwind CSS v4 · OpenTelemetry · Prometheus · Tempo · Loki · Grafana · Docker Compose · GitHub Actions
+Go 1.27 · PostgreSQL 18 · Redis 8 · Keycloak (OIDC, BFF sessions) · Garage/R2 (S3) · React 19 + TypeScript · TanStack Router/Query · Tailwind CSS v4 · OpenAPI 3.1 · OpenTelemetry · Prometheus · Tempo · Loki · Grafana · Docker Compose · GitHub Actions
 
 ## Local setup
 
-Requirements: Docker (or a compatible runtime), Go 1.27+, Node 24 LTS, pnpm. Run `make doctor` to check your environment.
+Requirements: a Docker runtime (OrbStack, Docker Desktop or Colima), Go 1.27+, Node 24 LTS and pnpm 12. Run `make doctor` to check your machine.
 
 ```bash
-git clone <repo-url> opsgrid && cd opsgrid
-make dev
+git clone https://github.com/Tony5897/opsgrid.git && cd opsgrid
+make setup   # toolchain, dependencies, browsers
+make dev     # build and start the stack; waits until healthy
 ```
+
+| Open | URL |
+|---|---|
+| OpsGrid | http://localhost:8080 |
+| Hot-reload UI (`make web-dev`) | http://localhost:5173 |
+| Component workbench (`make storybook`) | http://localhost:6006 |
+| Grafana (`make dev-obs`) | http://localhost:3000 |
+| Keycloak | http://localhost:8180 |
+| Mailpit | http://localhost:8025 |
+
+The full guide, covering every service, credential, command, test layer and troubleshooting step, is [docs/development.md](docs/development.md).
 
 ## Documentation
 
+- [Developer guide](docs/development.md)
 - [Implementation plan](IMPLEMENTATION_PLAN.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decision records](docs/adr/README.md)

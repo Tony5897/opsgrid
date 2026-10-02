@@ -42,9 +42,14 @@ setup: ## Install toolchain (mise), JS deps and browsers
 
 ##@ Run
 
+# Long-running services; one-shot jobs (migrate, storage-init) are handled
+# separately because `up --wait` treats any exited container as a failure.
+CORE_SERVICES := postgres redis keycloak storage mailpit api worker relay
+
 .PHONY: dev
 dev: ## Build and start the core stack (API serves the SPA on :8080)
-	$(COMPOSE) up -d --build --wait
+	$(COMPOSE) up -d --build --wait $(CORE_SERVICES)
+	$(COMPOSE) run --rm storage-init
 	@echo
 	@echo "  App          http://localhost:8080"
 	@echo "  Web (HMR)    make web-dev  → http://localhost:5173"
@@ -54,7 +59,9 @@ dev: ## Build and start the core stack (API serves the SPA on :8080)
 
 .PHONY: dev-obs
 dev-obs: ## Start the stack with telemetry export + Grafana/Prometheus/Tempo/Loki
-	OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317 $(COMPOSE) --profile observability up -d --build --wait
+	OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317 $(COMPOSE) --profile observability up -d --build --wait \
+	  $(CORE_SERVICES) otel-collector prometheus tempo loki grafana
+	$(COMPOSE) run --rm storage-init
 	@echo "  Grafana      http://localhost:3000"
 	@echo "  Prometheus   http://localhost:9091"
 
@@ -89,7 +96,7 @@ psql: ## psql as the runtime role (subject to RLS)
 ##@ Quality
 
 .PHONY: lint
-lint: lint-go lint-web lint-sql ## All linters
+lint: lint-go lint-web lint-api lint-sql ## All linters
 
 .PHONY: lint-go
 lint-go: ## golangci-lint (architecture boundaries, security, style)
@@ -99,6 +106,10 @@ lint-go: ## golangci-lint (architecture boundaries, security, style)
 lint-web: ## Biome + TypeScript
 	$(PNPM) exec biome check .
 	$(PNPM) -r typecheck
+
+.PHONY: lint-api
+lint-api: ## Redocly lint of the OpenAPI contract
+	$(PNPM) exec redocly lint api/openapi.yaml
 
 .PHONY: lint-sql
 lint-sql: ## squawk: unsafe migration patterns
@@ -132,6 +143,10 @@ test-web: ## Web unit/component tests (browser) + API client tests
 test-stories: ## Storybook interaction + accessibility tests
 	$(PNPM) --filter @opsgrid/web test:stories
 
+.PHONY: storybook
+storybook: ## Component workbench on http://localhost:6006
+	$(PNPM) --filter @opsgrid/web storybook
+
 .PHONY: test-e2e
 test-e2e: ## Playwright E2E against the running stack (make dev first)
 	$(PNPM) --filter @opsgrid/web e2e
@@ -143,6 +158,14 @@ test-fuzz: ## Short fuzz run of every Fuzz* target
 	    echo "fuzz $$pkg $$f"; $(GO) test -run=^$$ -fuzz="^$$f$$" -fuzztime=30s $$pkg; \
 	  done; \
 	done
+
+.PHONY: deps
+deps: ## Report available dependency upgrades (read-only)
+	@./scripts/deps-report.sh
+
+.PHONY: secrets-scan
+secrets-scan: ## gitleaks over the full git history
+	docker run --rm -v "$$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --config /repo/.gitleaks.toml --redact
 
 .PHONY: vuln
 vuln: ## Known-vulnerability scan (Go)

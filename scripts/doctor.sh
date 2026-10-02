@@ -34,7 +34,7 @@ if command -v docker >/dev/null && docker info >/dev/null 2>&1; then
 else bad "docker daemon not reachable (install/start OrbStack, Colima or Docker Desktop)"; fi
 
 echo "Ports"
-for p in 5432 6379 8080 8180 9090 5173 8025; do
+for p in 5432 6379 8080 8180 9090 3900 5173 8025; do
   if lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then
     owner=$(lsof -nP -iTCP:"$p" -sTCP:LISTEN | awk 'NR==2{print $1}')
     case "$owner" in
