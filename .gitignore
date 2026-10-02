@@ -37,3 +37,4 @@ docs/evidence/proofs-report.md.tmp
 .vitest/
 apps/web/.vitest/
 __screenshots__/
+osv-results.json

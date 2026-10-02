@@ -130,13 +130,18 @@ jobs:
       - name: gitleaks (full history)
         run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 git /repo --config /repo/.gitleaks.toml --redact --verbose
       - name: OSV-Scanner (Go and pnpm lockfiles)
-        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
-        with:
-          scan-args: |-
-            --config=osv-scanner.toml
-            --lockfile=go.mod
-            --lockfile=tools/go.mod
-            --lockfile=pnpm-lock.yaml
+        # osv-scanner v2.2.3's own exit code was observed to be inconsistent
+        # (0, 1 or 127) across otherwise-identical runs over the same
+        # findings, depending on whether --config/IgnoredVulns was used and
+        # how much it filtered. So CI never trusts that exit code: it always
+        # captures JSON and scripts/check-osv.py makes the pass/fail call
+        # from the structured results against an explicit, documented list
+        # of accepted IDs.
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:v2.2.3 \
+            scan --format=json --lockfile=go.mod --lockfile=tools/go.mod --lockfile=pnpm-lock.yaml \
+            > osv-results.json || true
+          python3 scripts/check-osv.py osv-results.json
 
   image:
     name: Image · build and scan
