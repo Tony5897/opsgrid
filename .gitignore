@@ -1,0 +1,34 @@
+# build
+/bin/
+/dist/
+apps/web/dist/
+internal/platform/webui/dist/*
+!internal/platform/webui/dist/.gitkeep
+storybook-static/
+
+# deps
+node_modules/
+.pnpm-store/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# test output
+coverage/
+*.out
+test-results/
+playwright-report/
+blob-report/
+docs/evidence/proofs-report.md.tmp
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp

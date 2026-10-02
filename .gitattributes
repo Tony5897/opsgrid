@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.woff2 binary
+# generated code: collapse in diffs
+internal/platform/database/sqlc/** linguist-generated=true
+internal/api/gen/** linguist-generated=true
+packages/api-client/src/gen/** linguist-generated=true
+pnpm-lock.yaml linguist-generated=true

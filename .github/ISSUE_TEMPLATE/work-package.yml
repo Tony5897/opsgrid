@@ -1,0 +1,16 @@
+name: Work package
+description: A gate work package with exit criteria
+labels: [work-package]
+body:
+  - type: input
+    id: gate
+    attributes: { label: Gate, placeholder: "G3 — Scheduling" }
+    validations: { required: true }
+  - type: textarea
+    id: scope
+    attributes: { label: Scope }
+    validations: { required: true }
+  - type: textarea
+    id: exit
+    attributes: { label: Exit proofs, description: Tests/evidence that close this package }
+    validations: { required: true }

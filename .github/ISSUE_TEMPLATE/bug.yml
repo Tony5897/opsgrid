@@ -1,0 +1,20 @@
+name: Bug report
+description: Something behaves differently from its documented guarantee
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: { label: What happened, description: Include request ID / trace ID if available }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected behavior }
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes: { label: Steps to reproduce }
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [tenancy, auth, work-orders, scheduling, realtime, async, attachments, observability, web-ui, infra]
