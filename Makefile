@@ -155,9 +155,14 @@ check: lint test-race test-integration test-stories ## Everything CI runs before
 
 .PHONY: generate
 generate: ## Regenerate code from the OpenAPI contract and SQL
-	$(PNPM) generate
+	$(GO) generate ./internal/api/...
+	$(PNPM) --filter @opsgrid/openapi-gen generate
 	@if [ -f sqlc.yaml ]; then $(GOTOOL) sqlc generate; fi
-	@if [ -f api/oapi-codegen.yaml ]; then $(GO) generate ./internal/api/...; fi
+
+.PHONY: check-generated
+check-generated: generate ## Fail if generated code differs from the contract
+	@git diff --exit-code -- internal/api/gen packages/api-client/src/gen || \
+	  (echo "Generated code is stale: run 'make generate' and commit the result." >&2; exit 1)
 
 .PHONY: build
 build: ## Build Go binaries into ./bin (without the embedded SPA)

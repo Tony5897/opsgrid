@@ -8,8 +8,8 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"github.com/Tony5897/opsgrid/internal/api"
 	"github.com/Tony5897/opsgrid/internal/platform/apperr"
-	"github.com/Tony5897/opsgrid/internal/platform/buildinfo"
 	"github.com/Tony5897/opsgrid/internal/platform/config"
 	"github.com/Tony5897/opsgrid/internal/platform/health"
 	"github.com/Tony5897/opsgrid/internal/platform/httpx"
@@ -91,19 +91,14 @@ func (rt *runtime) publicHandler() (http.Handler, error) {
 		return nil, err
 	}
 
-	api := http.NewServeMux()
-	api.HandleFunc("GET /v1/meta", func(w http.ResponseWriter, _ *http.Request) {
-		httpx.WriteJSON(w, http.StatusOK, map[string]string{
-			"service": "opsgrid",
-			"version": buildinfo.Version,
-			"commit":  buildinfo.Short(),
-		})
-	})
-	api.HandleFunc("/v1/", func(w http.ResponseWriter, r *http.Request) {
+	apiMux := http.NewServeMux()
+	// Unknown /v1 routes answer with a problem document, never the SPA.
+	apiMux.HandleFunc("/v1/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, rt.log, apperr.New(apperr.CodeResourceNotFound, "No such API route."))
 	})
+	routes := api.Handler(&api.Server{}, apiMux, rt.log)
 
-	apiChain := httpx.Chain(api,
+	apiChain := httpx.Chain(routes,
 		httpx.SecurityHeaders(rt.cfg.IsProduction(), ""),
 		httpx.MaxBytes(rt.cfg.HTTP.MaxBodyBytes),
 		csrf,

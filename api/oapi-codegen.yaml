@@ -1,0 +1,9 @@
+# Go server generation (ADR-011). Run via `make generate`.
+package: gen
+generate:
+  std-http-server: true
+  strict-server: true
+  models: true
+output: api.gen.go
+output-options:
+  skip-prune: true

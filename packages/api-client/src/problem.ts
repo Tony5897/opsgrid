@@ -1,42 +1,12 @@
+import type { FieldError, Problem, ProblemCode } from "./gen/types.gen.ts";
+import { zProblemCode } from "./gen/zod.gen.ts";
+
 /**
- * RFC 9457 problem details as returned by the OpsGrid API (ADR-012).
- * `code` is the stable, machine-readable identifier the UI maps to copy.
+ * RFC 9457 problem details as returned by the OpsGrid API (ADR-012). The
+ * shapes are generated from api/openapi.yaml; `code` is the stable,
+ * machine-readable identifier the UI maps to copy.
  */
-export type ProblemCode =
-  | "AUTHENTICATION_REQUIRED"
-  | "FORBIDDEN"
-  | "TENANT_NOT_FOUND"
-  | "RESOURCE_NOT_FOUND"
-  | "VALIDATION_FAILED"
-  | "PRECONDITION_REQUIRED"
-  | "VERSION_CONFLICT"
-  | "SCHEDULE_CONFLICT"
-  | "INVALID_TRANSITION"
-  | "IDEMPOTENCY_CONFLICT"
-  | "IDEMPOTENCY_KEY_REQUIRED"
-  | "REQUEST_TOO_LARGE"
-  | "UNSUPPORTED_MEDIA_TYPE"
-  | "RATE_LIMITED"
-  | "DEPENDENCY_UNAVAILABLE"
-  | "INTERNAL_ERROR";
-
-export interface FieldError {
-  field: string;
-  message: string;
-}
-
-export interface Problem {
-  type: string;
-  title: string;
-  status: number;
-  detail?: string;
-  instance?: string;
-  code: ProblemCode;
-  requestId?: string;
-  traceId?: string;
-  details?: Record<string, unknown>;
-  errors?: FieldError[];
-}
+export type { FieldError, Problem, ProblemCode };
 
 /** Error thrown for every non-2xx API response. */
 export class ApiError extends Error {
@@ -69,24 +39,7 @@ export class NetworkError extends Error {
   }
 }
 
-const KNOWN_CODES = new Set<string>([
-  "AUTHENTICATION_REQUIRED",
-  "FORBIDDEN",
-  "TENANT_NOT_FOUND",
-  "RESOURCE_NOT_FOUND",
-  "VALIDATION_FAILED",
-  "PRECONDITION_REQUIRED",
-  "VERSION_CONFLICT",
-  "SCHEDULE_CONFLICT",
-  "INVALID_TRANSITION",
-  "IDEMPOTENCY_CONFLICT",
-  "IDEMPOTENCY_KEY_REQUIRED",
-  "REQUEST_TOO_LARGE",
-  "UNSUPPORTED_MEDIA_TYPE",
-  "RATE_LIMITED",
-  "DEPENDENCY_UNAVAILABLE",
-  "INTERNAL_ERROR",
-]);
+const KNOWN_CODES: ReadonlySet<string> = new Set(zProblemCode.options);
 
 /**
  * Normalizes any error body into a Problem. Non-problem responses (proxy
@@ -95,15 +48,16 @@ const KNOWN_CODES = new Set<string>([
  */
 export function toProblem(status: number, body: unknown, requestId?: string | null): Problem {
   if (body && typeof body === "object" && "code" in body && typeof body.code === "string") {
+    const rawCode: string = body.code;
     const b = body as Partial<Problem>;
     return {
       type: b.type ?? "about:blank",
       title: b.title ?? "Request failed",
       status: b.status ?? status,
-      code: KNOWN_CODES.has(b.code as string) ? (b.code as ProblemCode) : "INTERNAL_ERROR",
+      code: KNOWN_CODES.has(rawCode) ? (rawCode as ProblemCode) : "INTERNAL_ERROR",
       ...(b.detail !== undefined && { detail: b.detail }),
       ...(b.instance !== undefined && { instance: b.instance }),
-      ...((b.requestId ?? requestId) && { requestId: (b.requestId ?? requestId) as string }),
+      ...((b.requestId ?? requestId) ? { requestId: b.requestId ?? (requestId as string) } : {}),
       ...(b.traceId !== undefined && { traceId: b.traceId }),
       ...(b.details !== undefined && { details: b.details }),
       ...(b.errors !== undefined && { errors: b.errors }),

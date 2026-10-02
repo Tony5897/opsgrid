@@ -1,0 +1,13 @@
+{
+  "name": "@opsgrid/openapi-gen",
+  "private": true,
+  "type": "module",
+  "description": "Generates TypeScript types and Zod schemas from api/openapi.yaml into packages/api-client/src/gen.",
+  "scripts": {
+    "generate": "openapi-ts"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.99.0",
+    "typescript": "5.9.3"
+  }
+}

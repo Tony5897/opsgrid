@@ -1,6 +1,9 @@
 packages:
   - apps/*
   - packages/*
+  # Code generators that need the TypeScript JS API (TS 7 is native and has
+  # none) live in isolated packages with their own TypeScript 5.9.
+  - tools/openapi-gen
 
 # Supply-chain hygiene: refuse packages published less than a day ago
 # (most malicious releases are pulled within hours) and only run install

@@ -9,10 +9,13 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "generate": "openapi-ts"
+    "generate": "pnpm --filter @opsgrid/openapi-gen generate"
   },
   "devDependencies": {
     "typescript": "7.0.2",
     "vitest": "5.0.3"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
   }
 }

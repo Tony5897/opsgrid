@@ -1,0 +1,101 @@
+openapi: 3.1.1
+info:
+  title: OpsGrid API
+  version: 0.1.0
+  summary: Multi-tenant, real-time field operations.
+  description: |
+    Contract-first HTTP API for OpsGrid (ADR-011). Generated code:
+    Go strict-server interfaces (`internal/api/gen`) and TypeScript types and
+    Zod schemas (`packages/api-client/src/gen`). Do not edit generated files;
+    change this document and run `make generate`.
+
+    Conventions
+    - Errors are RFC 9457 problem documents (`application/problem+json`) with a
+      stable `code` (ADR-012).
+    - Unsafe requests require `X-OpsGrid-CSRF: 1` (ADR-019).
+    - POST commands require `Idempotency-Key`; updates require `If-Match`.
+    - Every response carries `X-Request-Id` (`req_` + ULID); quote it when
+      reporting problems. It also appears as `requestId` in problem bodies.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: /
+    description: Same origin as the web app (ADR-020)
+tags:
+  - name: meta
+    description: Service information
+paths:
+  /v1/meta:
+    get:
+      operationId: getMeta
+      tags: [meta]
+      summary: Service build information
+      security: []
+      responses:
+        "200":
+          description: Build information.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Meta" }
+        default: { $ref: "#/components/responses/Problem" }
+components:
+  responses:
+    Problem:
+      description: An RFC 9457 problem document.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Meta:
+      type: object
+      additionalProperties: false
+      required: [service, version, commit]
+      properties:
+        service: { type: string, const: opsgrid }
+        version: { type: string, examples: ["v1.0.0", "dev"] }
+        commit: { type: string, description: Abbreviated git commit of the build. }
+    ProblemCode:
+      type: string
+      description: Stable, machine-readable error identifier (never renamed).
+      enum:
+        - AUTHENTICATION_REQUIRED
+        - FORBIDDEN
+        - TENANT_NOT_FOUND
+        - RESOURCE_NOT_FOUND
+        - VALIDATION_FAILED
+        - PRECONDITION_REQUIRED
+        - VERSION_CONFLICT
+        - SCHEDULE_CONFLICT
+        - INVALID_TRANSITION
+        - IDEMPOTENCY_CONFLICT
+        - IDEMPOTENCY_KEY_REQUIRED
+        - REQUEST_TOO_LARGE
+        - UNSUPPORTED_MEDIA_TYPE
+        - RATE_LIMITED
+        - DEPENDENCY_UNAVAILABLE
+        - INTERNAL_ERROR
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field: { type: string }
+        message: { type: string }
+    Problem:
+      type: object
+      description: RFC 9457 problem details with OpsGrid extension members.
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        detail: { type: string }
+        instance: { type: string }
+        code: { $ref: "#/components/schemas/ProblemCode" }
+        requestId: { type: string }
+        traceId: { type: string }
+        details: { type: object, additionalProperties: true }
+        errors:
+          type: array
+          items: { $ref: "#/components/schemas/FieldError" }

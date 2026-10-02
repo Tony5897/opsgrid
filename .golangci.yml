@@ -99,6 +99,7 @@ linters:
             - "**/internal/**/*.go"
             - "!**/internal/platform/**"
             - "!**/internal/app/**"
+            - "!**/internal/api/**" # transport composition layer (generated server + adapters)
             - "!**/http.go"
             - "!**/http_*.go"
             - "!$test"

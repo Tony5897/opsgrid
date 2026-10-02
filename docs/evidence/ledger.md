@@ -8,10 +8,11 @@ Status legend: ⬜ not started · 🟨 in progress · ✅ proven
 
 | Property | Required proof | Gate | Status | Evidence |
 |---|---|---|---|---|
+| API contract conformance | Every API test response validated against `api/openapi.yaml`; generated code current | G0+ | 🟨 | [`apitest`](../../internal/api/apitest/contract.go) with [drift-rejection test](../../internal/api/apitest/contract_test.go); `make check-generated` |
 | Tenant confidentiality | Automated cross-tenant access matrix passes for every tenant route | G1 | ⬜ | |
 | Tenant relational integrity | Composite FK tests reject cross-org references | G1–G2 | ⬜ | |
-| RLS fail-closed | Missing tenant context yields zero rows / rejected writes | G1 | ⬜ | |
-| Runtime role hardening | Schema test: runtime role is not owner and has no BYPASSRLS; every tenant table has RLS enabled + forced | G1 | ⬜ | |
+| RLS fail-closed | Missing tenant context yields zero rows / rejected writes | G1 | 🟨 | Policy template proven on a probe table: [`TestRLSPolicyTemplateFailsClosed`](../../internal/platform/database/database_integration_test.go), [`TestTenantContextIsTransactionLocal`](../../internal/platform/database/database_integration_test.go). Real tenant tables arrive in G1. |
+| Runtime role hardening | Schema test: runtime role is not owner and has no BYPASSRLS; every tenant table has RLS enabled + forced | G1 | 🟨 | Role attributes, no-DDL and timeouts proven: [`TestRuntimeRolesAreHardened`](../../internal/platform/database/database_integration_test.go). Per-table RLS schema test lands with the first tenant tables (G1). |
 | Scheduling integrity | 100 concurrent conflicting assignments: 0 overlapping rows | G3 | ⬜ | |
 | State-machine correctness | Exhaustive transition table + property tests | G2 | ⬜ | |
 | Stale-write safety | Old versions rejected with 412; two-browser E2E | G4 | ⬜ | |
@@ -24,10 +25,10 @@ Status legend: ⬜ not started · 🟨 in progress · ✅ proven
 | Authorization | Role × permission × object matrix tests | G1–G2 | ⬜ | |
 | Auditability | Every command writes actor, entity, org, request and before/after | G2 | ⬜ | |
 | Traceability | HTTP → DB → outbox → worker correlation shown in Tempo | G8 | ⬜ | |
-| Reproducibility | Clean clone boots with one documented command | G0 | ⬜ | |
-| Migration safety | Build from empty + upgrade from the previous release snapshot; squawk clean | G0+ | ⬜ | |
+| Reproducibility | Clean clone boots with one documented command | G0 | 🟨 | `make doctor && make dev` boots the healthy stack locally; CI verification pending. |
+| Migration safety | Build from empty + upgrade from the previous release snapshot; squawk clean | G0+ | 🟨 | Empty→head on every integration run; squawk clean; [migration file guards](../../db/db_test.go). Snapshot upgrade starts at the first release. |
 | Security | Applicable ASVS 5.0.0 controls have implementation/test evidence | G9 | ⬜ | |
-| Accessibility | WCAG 2.2 AA: automated axe + recorded manual keyboard/screen-reader pass | G2+ | ⬜ | |
+| Accessibility | WCAG 2.2 AA: automated axe + recorded manual keyboard/screen-reader pass | G2+ | 🟨 | Token contrast measured in both themes ([`tokens.test.ts`](../../apps/web/src/design/tokens.test.ts)); shell axe + focus tests ([`shell.test.tsx`](../../apps/web/src/app/shell.test.tsx)); E2E axe light/dark ([`smoke.spec.ts`](../../apps/web/e2e/smoke.spec.ts)). Manual pass pending. |
 | Performance | Benchmark report with methodology, hardware and percentiles | G10 | ⬜ | |
 | Operational readiness | Dashboards, alert rules and runbooks for each alert | G8 | ⬜ | |
 | Supply chain | Signed images, SBOM, provenance attestation | G0+ | ⬜ | |
@@ -36,4 +37,4 @@ Status legend: ⬜ not started · 🟨 in progress · ✅ proven
 
 | Gate | Closed | Tag | Notes |
 |---|---|---|---|
-| G0 Foundation | | | |
+| G0 Foundation | in progress | | Remaining: S3 storage spike (ADR-017), CI workflows, Renovate/gitleaks config. Keycloak login round trip moves to G1 (needs the BFF). |

@@ -10,7 +10,8 @@
 .github
 docs
 test
-tools
+tools/*
+!tools/openapi-gen
 *.md
 !apps/web/**/*.md
 .env

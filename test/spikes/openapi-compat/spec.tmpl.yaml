@@ -1,0 +1,114 @@
+openapi: __VERSION__
+info: { title: OpsGrid spike, version: 0.0.0 }
+paths:
+  /v1/organizations/{orgId}/work-orders:
+    parameters:
+      - { name: orgId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: listWorkOrders
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: array, items: { $ref: '#/components/schemas/WorkOrderStatus' } }, style: form, explode: true }
+      responses:
+        "200":
+          description: Page
+          content: { application/json: { schema: { $ref: '#/components/schemas/WorkOrderPage' } } }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createWorkOrder
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 128 } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateWorkOrder' } } }
+      responses:
+        "201":
+          description: Created
+          headers: { ETag: { schema: { type: string } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/WorkOrder' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /v1/organizations/{orgId}/work-orders/{id}/complete:
+    parameters:
+      - { name: orgId, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: completeWorkOrder
+      parameters:
+        - { name: If-Match, in: header, required: true, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Completed
+          headers: { ETag: { schema: { type: string } } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/WorkOrder' } } }
+        default: { $ref: '#/components/responses/Problem' }
+components:
+  responses:
+    Problem:
+      description: RFC 9457 problem
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  schemas:
+    WorkOrderStatus: { type: string, enum: [draft, scheduled, dispatched, in_progress, blocked, completed, cancelled] }
+    Priority: { type: string, enum: [low, normal, high, urgent] }
+    WorkOrder:
+      type: object
+      required: [id, number, title, status, priority, version, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: integer, format: int64 }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        status: { $ref: '#/components/schemas/WorkOrderStatus' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        version: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+    CreateWorkOrder:
+      type: object
+      additionalProperties: false
+      required: [title, siteId, priority]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        siteId: { type: string, format: uuid }
+        priority: { $ref: '#/components/schemas/Priority' }
+    WorkOrderPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/WorkOrder' } }
+        nextCursor: { type: string }
+    FieldError:
+      type: object
+      required: [field, message]
+      properties: { field: { type: string }, message: { type: string } }
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        code: { type: string }
+        requestId: { type: string }
+        traceId: { type: string }
+        details: { type: object, additionalProperties: true }
+        errors: { type: array, items: { $ref: '#/components/schemas/FieldError' } }
+    RealtimeEvent:
+      oneOf:
+        - { $ref: '#/components/schemas/WorkOrderChanged' }
+        - { $ref: '#/components/schemas/ReportReady' }
+      discriminator:
+        propertyName: type
+        mapping:
+          work_order.updated: '#/components/schemas/WorkOrderChanged'
+          report.ready: '#/components/schemas/ReportReady'
+    WorkOrderChanged:
+      type: object
+      required: [type, entityId, version]
+      properties: { type: { type: string }, entityId: { type: string, format: uuid }, version: { type: integer, format: int64 } }
+    ReportReady:
+      type: object
+      required: [type, reportId]
+      properties: { type: { type: string }, reportId: { type: string, format: uuid } }

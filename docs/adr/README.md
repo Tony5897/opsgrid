@@ -14,7 +14,7 @@ Format: MADR-style ([template](000-template.md)). Number decisions sequentially 
 | [008](008-redis-streams.md) | Redis Streams for background work | Accepted |
 | [009](009-websocket-event-model.md) | WebSocket notifications carry identity and version, not state | Accepted |
 | [010](010-no-kubernetes-initially.md) | Docker Compose, not Kubernetes, as the canonical runtime | Accepted |
-| [011](011-openapi-version.md) | OpenAPI contract version | Proposed |
+| [011](011-openapi-version.md) | OpenAPI contract version | Accepted |
 | [012](012-problem-details-errors.md) | RFC 9457 Problem Details for all API errors | Accepted |
 | [013](013-sessions-in-postgresql.md) | Server-side sessions stored in PostgreSQL | Accepted |
 | [014](014-stdlib-router.md) | Go standard library ServeMux for routing | Accepted |
