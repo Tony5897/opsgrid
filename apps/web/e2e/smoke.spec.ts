@@ -56,8 +56,14 @@ test.describe("foundation smoke", () => {
   test("keyboard: skip link moves focus to main content", async ({ page, isMobile }) => {
     test.skip(isMobile, "physical keyboard flow");
     await page.goto("/o/cascade-facilities");
-    await page.keyboard.press("Tab");
+    // page.goto() resolves on the load event, which can race the page
+    // actually receiving window/document focus (especially under parallel
+    // workers). Bring it to front and focus the body explicitly so the
+    // first Tab is guaranteed to land on the skip link, not nowhere.
+    await page.bringToFront();
+    await page.locator("body").evaluate((el) => el.focus());
     const skip = page.getByRole("link", { name: "Skip to main content" });
+    await page.keyboard.press("Tab");
     await expect(skip).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.locator("#main-content")).toBeFocused();

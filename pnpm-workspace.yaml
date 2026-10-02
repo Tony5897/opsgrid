@@ -12,3 +12,8 @@ allowBuilds:
   esbuild: true
   msw: true
 minimumReleaseAge: 1440
+
+# Transitive dependency pins for known vulnerabilities (OSV), until the
+# parent package bumps its own constraint. Verified compatible via `make check`.
+overrides:
+  js-yaml@<4.3.2: ">=4.3.2" # GHSA-2883-xcg3-v3hh, GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj
