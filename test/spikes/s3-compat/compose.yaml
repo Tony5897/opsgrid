@@ -1,0 +1,13 @@
+# ADR-017 spike: two S3-compatible servers side by side. Throwaway volumes.
+name: opsgrid-s3-spike
+services:
+  garage:
+    image: dxflrs/garage:v2.4.1
+    volumes: [./garage.toml:/etc/garage.toml:ro]
+    ports: ["127.0.0.1:13900:3900"]
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/s3.json",
+              "-master.volumeSizeLimitMB=64", "-volume.max=4", "-ip.bind=0.0.0.0"]
+    volumes: [./seaweedfs-s3.json:/etc/s3.json:ro]
+    ports: ["127.0.0.1:18333:8333"]

@@ -1,0 +1,19 @@
+# Garage: local S3-compatible object storage (ADR-017). Development only.
+# Production/demo uses Cloudflare R2 through the same S3 API.
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+replication_factor = 1
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+# Local-only cluster secret (single node, never exposed). Not a credential.
+rpc_secret = "4f7e5c1b9a2d8e6f0c3b7a1d5e9f2c4b8a6d0e3f7c1b5a9d2e6f0c4b8a3d7e1f"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+api_bind_addr = "[::]:3903"
+# Read from the GARAGE_ADMIN_TOKEN environment variable (see compose.yaml).

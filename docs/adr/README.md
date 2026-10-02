@@ -20,7 +20,7 @@ Format: MADR-style ([template](000-template.md)). Number decisions sequentially 
 | [014](014-stdlib-router.md) | Go standard library ServeMux for routing | Accepted |
 | [015](015-uuidv7-identifiers.md) | UUIDv7 primary keys plus per-organization display numbers | Accepted |
 | [016](016-frontend-stack.md) | Frontend stack | Accepted |
-| [017](017-local-object-storage.md) | Local S3-compatible object storage server | Proposed |
+| [017](017-local-object-storage.md) | Local S3-compatible object storage server | Accepted |
 | [018](018-log-pipeline.md) | Logs: slog JSON on stdout; shipping decided by OTel log maturity | Accepted |
 | [019](019-csrf-defense.md) | CSRF defense in depth | Accepted |
 | [020](020-spa-served-by-bff.md) | The Go API serves the built SPA (same origin) | Accepted |
