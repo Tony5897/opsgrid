@@ -1,0 +1,22 @@
+{
+  "name": "opsgrid",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @opsgrid/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "generate": "pnpm --filter @opsgrid/api-client generate"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "squawk-cli": "2.66.0"
+  }
+}

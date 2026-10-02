@@ -1,0 +1,143 @@
+/*
+ * OpsGrid design tokens: "calm operations console".
+ *
+ * Principles
+ *   - Information first: neutral surfaces, color reserved for meaning.
+ *   - Status is always color + icon + label; color alone never carries meaning.
+ *   - Every text/background pair meets WCAG 2.2 AA (4.5:1 body text, 3:1 for
+ *     UI boundaries), verified in both themes by src/design/tokens.test.ts.
+ *
+ * Theming uses CSS light-dark(): each token declares its light and dark value
+ * side by side, and `color-scheme` picks one. System preference is the
+ * default; [data-theme="light"|"dark"] on <html> overrides it.
+ *
+ * Density: [data-density="compact"] on <html>.
+ */
+
+:root {
+  color-scheme: light dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root {
+  /* ---- Surfaces --------------------------------------------------------- */
+  --surface-canvas: light-dark(oklch(0.985 0.002 260), oklch(0.155 0.008 260));
+  --surface-1: light-dark(oklch(1 0 0), oklch(0.19 0.01 260)); /* cards, panels */
+  --surface-2: light-dark(
+    oklch(0.97 0.004 260),
+    oklch(0.225 0.011 260)
+  ); /* nested, table headers */
+  --surface-3: light-dark(oklch(0.94 0.006 260), oklch(0.27 0.012 260)); /* hover, selection */
+  --surface-inverse: light-dark(oklch(0.19 0.01 260), oklch(0.97 0.004 260));
+  --surface-overlay: light-dark(oklch(0.19 0.01 260 / 0.45), oklch(0.1 0.01 260 / 0.6));
+
+  /* ---- Text --------------------------------------------------------------- */
+  --text-primary: light-dark(oklch(0.19 0.01 260), oklch(0.97 0.004 260));
+  --text-secondary: light-dark(oklch(0.47 0.016 260), oklch(0.74 0.014 260));
+  --text-subtle: light-dark(oklch(0.53 0.016 260), oklch(0.66 0.014 260));
+  --text-inverse: light-dark(oklch(0.985 0.002 260), oklch(0.19 0.01 260));
+  --text-link: light-dark(oklch(0.48 0.2 262), oklch(0.78 0.11 262));
+
+  /* ---- Borders & focus ------------------------------------------------------ */
+  --border-subtle: light-dark(oklch(0.94 0.006 260), oklch(0.225 0.011 260));
+  --border-default: light-dark(oklch(0.9 0.008 260), oklch(0.29 0.012 260));
+  --border-strong: light-dark(
+    oklch(0.62 0.014 260),
+    oklch(0.55 0.014 260)
+  ); /* 3:1 input outlines */
+  --focus-ring: light-dark(oklch(0.55 0.2 262), oklch(0.75 0.13 262));
+
+  /* ---- Accent (primary actions) ------------------------------------------- */
+  --accent: light-dark(oklch(0.48 0.2 262), oklch(0.72 0.14 262));
+  --accent-hover: light-dark(oklch(0.41 0.18 262), oklch(0.78 0.12 262));
+  --accent-fg: light-dark(oklch(1 0 0), oklch(0.155 0.008 260));
+  --accent-subtle: light-dark(oklch(0.96 0.025 262), oklch(0.3 0.08 262));
+  --accent-subtle-fg: light-dark(oklch(0.41 0.18 262), oklch(0.92 0.05 262));
+
+  /* ---- Feedback ------------------------------------------------------------- */
+  --danger: light-dark(oklch(0.52 0.19 25), oklch(0.72 0.16 25));
+  --danger-fg: light-dark(oklch(1 0 0), oklch(0.155 0.008 260));
+  --danger-subtle: light-dark(oklch(0.95 0.03 25), oklch(0.29 0.07 25));
+  --success: light-dark(oklch(0.5 0.13 150), oklch(0.74 0.14 150));
+  --warning: light-dark(oklch(0.5 0.12 70), oklch(0.8 0.13 80));
+
+  /* ---- Work-order status: bg / fg / border ----------------------------------- */
+  --status-draft-bg: light-dark(oklch(0.95 0.005 260), oklch(0.27 0.01 260));
+  --status-draft-fg: light-dark(oklch(0.4 0.015 260), oklch(0.86 0.01 260));
+  --status-draft-border: light-dark(oklch(0.85 0.01 260), oklch(0.4 0.012 260));
+  --status-scheduled-bg: light-dark(oklch(0.95 0.03 250), oklch(0.28 0.06 250));
+  --status-scheduled-fg: light-dark(oklch(0.42 0.14 250), oklch(0.86 0.08 250));
+  --status-scheduled-border: light-dark(oklch(0.82 0.07 250), oklch(0.42 0.1 250));
+  --status-dispatched-bg: light-dark(oklch(0.95 0.03 290), oklch(0.28 0.07 290));
+  --status-dispatched-fg: light-dark(oklch(0.43 0.16 290), oklch(0.87 0.08 290));
+  --status-dispatched-border: light-dark(oklch(0.83 0.07 290), oklch(0.43 0.11 290));
+  --status-in-progress-bg: light-dark(oklch(0.96 0.045 80), oklch(0.3 0.06 75));
+  --status-in-progress-fg: light-dark(oklch(0.44 0.11 60), oklch(0.89 0.11 85));
+  --status-in-progress-border: light-dark(oklch(0.83 0.1 80), oklch(0.46 0.09 75));
+  --status-blocked-bg: light-dark(oklch(0.95 0.03 25), oklch(0.29 0.07 25));
+  --status-blocked-fg: light-dark(oklch(0.46 0.17 25), oklch(0.87 0.08 25));
+  --status-blocked-border: light-dark(oklch(0.83 0.08 25), oklch(0.45 0.12 25));
+  --status-completed-bg: light-dark(oklch(0.95 0.035 150), oklch(0.28 0.05 150));
+  --status-completed-fg: light-dark(oklch(0.41 0.11 150), oklch(0.87 0.1 150));
+  --status-completed-border: light-dark(oklch(0.82 0.08 150), oklch(0.42 0.08 150));
+  --status-cancelled-bg: light-dark(oklch(0.96 0.003 260), oklch(0.25 0.006 260));
+  --status-cancelled-fg: light-dark(oklch(0.46 0.01 260), oklch(0.76 0.01 260));
+  --status-cancelled-border: light-dark(oklch(0.87 0.006 260), oklch(0.38 0.008 260));
+
+  /* ---- Priority (text/icon color on surface-1) --------------------------------- */
+  --priority-low: light-dark(oklch(0.5 0.02 260), oklch(0.74 0.02 260));
+  --priority-normal: light-dark(oklch(0.47 0.1 250), oklch(0.78 0.09 250));
+  --priority-high: light-dark(oklch(0.5 0.13 55), oklch(0.8 0.13 60));
+  --priority-urgent: light-dark(oklch(0.5 0.2 25), oklch(0.74 0.16 25));
+
+  /* ---- Realtime connection indicator --------------------------------------------- */
+  --live-connected: light-dark(oklch(0.55 0.15 150), oklch(0.72 0.16 150));
+  --live-reconnecting: light-dark(oklch(0.6 0.14 70), oklch(0.8 0.15 80));
+  --live-offline: light-dark(oklch(0.55 0.2 25), oklch(0.7 0.18 25));
+  --live-pulse: light-dark(oklch(0.95 0.05 250), oklch(0.32 0.06 250));
+
+  /* ---- Shape, elevation, motion ------------------------------------------------- */
+  --corner-sm: 6px;
+  --corner-md: 8px;
+  --corner-lg: 12px;
+  --elevation-sm: 0 1px 2px light-dark(oklch(0.19 0.01 260 / 0.06), oklch(0 0 0 / 0.4));
+  --elevation-md:
+    0 1px 2px light-dark(oklch(0.19 0.01 260 / 0.06), oklch(0 0 0 / 0.4)),
+    0 4px 12px light-dark(oklch(0.19 0.01 260 / 0.06), oklch(0 0 0 / 0.3));
+  --elevation-lg: 0 8px 28px light-dark(oklch(0.19 0.01 260 / 0.14), oklch(0 0 0 / 0.5));
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+  --motion-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ---- Density (comfortable default) ---------------------------------------- */
+  --density-row: 44px;
+  --density-control: 36px;
+  --density-gap: 12px;
+  --density-pad: 16px;
+
+  /* ---- Layout ----------------------------------------------------------------- */
+  --shell-sidebar: 248px;
+  --shell-sidebar-collapsed: 60px;
+  --shell-topbar: 56px;
+}
+
+:root[data-density="compact"] {
+  --density-row: 34px;
+  --density-control: 30px;
+  --density-gap: 8px;
+  --density-pad: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Supply-chain hygiene: refuse packages published less than a day ago
+# (most malicious releases are pulled within hours) and only run install
+# scripts for packages that need them.
+allowBuilds:
+  esbuild: true
+  msw: true
+minimumReleaseAge: 1440
