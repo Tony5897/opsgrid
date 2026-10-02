@@ -176,6 +176,17 @@ Conventions and the rules CI enforces are in [CONTRIBUTING](CONTRIBUTING.md).
 
 All actions are pinned to full commit SHAs, and every workflow defaults to read-only permissions.
 
+**Verifying a released image.** `release.yml` signs every image (cosign, keyless/OIDC), attaches an SPDX SBOM attestation, and records SLSA build provenance. cosign's signature storage changed between v2 and v3 in a way that makes a v2 client unable to discover a v3-signed image's signature on GHCR (and vice versa) — use a **cosign v3+** client, matching what `sigstore/cosign-installer` installs in CI:
+
+```bash
+cosign verify ghcr.io/tony5897/opsgrid:edge \
+  --certificate-identity "https://github.com/Tony5897/opsgrid/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+# or, via GitHub's own attestation store (no cosign needed):
+gh attestation verify oci://ghcr.io/tony5897/opsgrid:edge -R Tony5897/opsgrid
+```
+
 **After pushing to GitHub for the first time**, in the repository settings:
 - *Branches → Add rule for `main`*: require PRs, require status check **CI passed**, require linear history.
 - *Security*: enable secret scanning, push protection and Dependabot **alerts** (alerts only, not version-update PRs).
