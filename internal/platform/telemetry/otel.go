@@ -15,7 +15,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // Options configures Setup.
@@ -40,7 +40,7 @@ func Setup(ctx context.Context, o Options) (Shutdown, error) {
 		semconv.SchemaURL,
 		semconv.ServiceName(o.ServiceName),
 		semconv.ServiceVersion(o.ServiceVersion),
-		semconv.DeploymentEnvironmentName(o.Environment),
+		semconv.DeploymentEnvironmentNameKey.String(o.Environment),
 	))
 	if err != nil {
 		return nil, fmt.Errorf("telemetry resource: %w", err)

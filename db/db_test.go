@@ -43,6 +43,16 @@ func TestMigrationFilesAreWellFormed(t *testing.T) {
 		if !strings.Contains(string(body), "-- +goose Up") {
 			t.Errorf("%s: missing '-- +goose Up'", name)
 		}
+		// goose splits on semicolons; dollar-quoted bodies (functions, DO
+		// blocks) must be wrapped so they are sent as one statement.
+		if n := strings.Count(string(body), "$$") / 2; n > 0 {
+			begins := strings.Count(string(body), "-- +goose StatementBegin")
+			ends := strings.Count(string(body), "-- +goose StatementEnd")
+			multiline := strings.Count(string(body), "$$\n") // single-line SQL functions are safe
+			if begins != ends || begins < multiline/2 {
+				t.Errorf("%s: dollar-quoted blocks need -- +goose StatementBegin/End (begins=%d ends=%d)", name, begins, ends)
+			}
+		}
 	}
 }
 

@@ -1,0 +1,10 @@
+# squawk: PostgreSQL migration safety linter (IMPLEMENTATION_PLAN §2, §5.3).
+# Flags lock-heavy or unsafe DDL (e.g. non-concurrent index builds on large
+# tables, adding NOT NULL without a default, column type rewrites).
+assume_in_transaction = true
+pg_version = "18.0"
+excluded_rules = [
+  # IDs are uuid by design (ADR-015); squawk's int/bigint preference is moot.
+  "prefer-bigint-over-int",
+  "prefer-identity",
+]

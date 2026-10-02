@@ -5,6 +5,9 @@
 -- db/bootstrap/roles.sql.
 
 -- +goose Up
+-- Fail fast instead of queueing behind (and blocking) live traffic.
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
 
 -- Trusted extensions: creatable by the database owner.
 CREATE EXTENSION IF NOT EXISTS btree_gist; -- scalar = alongside range && in exclusion constraints
@@ -60,6 +63,7 @@ COMMENT ON FUNCTION app.current_user_id() IS
     'Transaction-local acting user set by platform/database.InTenantTx/InUserTx; NULL when unset.';
 
 -- Shared trigger: maintain updated_at on mutable tables.
+-- +goose StatementBegin
 CREATE FUNCTION app.touch_updated_at() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -68,8 +72,10 @@ BEGIN
     RETURN NEW;
 END
 $$;
+-- +goose StatementEnd
 
 -- Shared trigger: make a table append-only regardless of grants (audit).
+-- +goose StatementBegin
 CREATE FUNCTION app.reject_mutation() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -78,6 +84,7 @@ BEGIN
         USING ERRCODE = 'insufficient_privilege';
 END
 $$;
+-- +goose StatementEnd
 
 -- +goose Down
 DROP FUNCTION IF EXISTS app.reject_mutation();

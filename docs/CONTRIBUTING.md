@@ -20,7 +20,7 @@ Run `make help` to list all targets.
 4. **Authorization.** Call `authz.Can(ctx, principal, permission, resource)`. Never compare role names in business code. Cross-tenant access returns 404, not 403.
 5. **Errors.** Return typed domain errors. `httpx.WriteError` maps them to RFC 9457 problem details. Database error text never reaches clients.
 6. **SQL.** Queries live in `db/queries/*.sql` and are generated with sqlc. User input never becomes an identifier: sorting uses allowlisted enums mapped to prebuilt queries.
-7. **Migrations.** Forward-only SQL files under `db/migrations/`, linted by squawk. After Gate 4, schema changes follow expand-and-contract.
+7. **Migrations.** Forward-only SQL files under `db/migrations/`, linted by squawk. Each `-- +goose Up` section starts with `SET LOCAL lock_timeout` and `SET LOCAL statement_timeout`, so a migration fails fast instead of queueing behind (and blocking) live traffic. Wrap dollar-quoted bodies in `-- +goose StatementBegin/End`. After Gate 4, schema changes follow expand-and-contract.
 8. **Contract first.** Change `api/openapi.yaml`, run `make generate`, then implement. CI fails on a stale generated client or an unflagged breaking change.
 
 ## Never do this to make a test pass
