@@ -1,0 +1,134 @@
+version: "2"
+
+run:
+  timeout: 5m
+  build-tags: [integration]
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - contextcheck
+    - depguard
+    - errcheck
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - noctx
+    - nolintlint
+    - revive
+    - sqlclosecheck
+    - staticcheck
+    - unconvert
+    - unused
+    - usestdlibvars
+
+  settings:
+    exhaustive:
+      # Every switch over a state-machine enum must handle all values.
+      default-signifies-exhaustive: false
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+
+    gosec:
+      excludes:
+        - G104 # covered by errcheck
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # readability over a few bytes
+        - shadow
+
+    revive:
+      rules:
+        - name: exported
+          disabled: true # internal packages; doc comments enforced in review
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: receiver-naming
+        - name: unexported-return
+        - name: unused-parameter
+          disabled: true
+
+    forbidigo:
+      analyze-types: true
+      forbid:
+        # Tenant context (ADR-004): only platform/database may open transactions
+        # or run queries on the pool directly.
+        - pattern: ^pgxpool\.Pool\.(Begin|BeginTx|Exec|Query|QueryRow|SendBatch|CopyFrom)$
+          msg: use database.DB.InTenantTx / InUserTx / InSystemTx
+        - pattern: ^pgx\.(BeginFunc|BeginTxFunc)$
+          msg: use database.DB.InTenantTx / InUserTx / InSystemTx
+        # Structured logging only.
+        - pattern: ^(fmt\.Print.*|print|println)$
+          msg: use log/slog
+        - pattern: ^log\.(Print|Fatal|Panic).*$
+          msg: use log/slog and return errors
+
+    depguard:
+      rules:
+        domain-purity:
+          # Domain models and state machines are pure: no IO, no transport.
+          files:
+            - "**/internal/*/domain.go"
+            - "**/internal/*/domain_*.go"
+          deny:
+            - pkg: net/http
+              desc: domain code is transport-agnostic
+            - pkg: github.com/jackc/pgx
+              desc: domain code does no IO
+            - pkg: github.com/redis/go-redis
+              desc: domain code does no IO
+            - pkg: github.com/Tony5897/opsgrid/internal/platform/httpx
+              desc: domain code is transport-agnostic
+            - pkg: github.com/Tony5897/opsgrid/internal/platform/database
+              desc: domain code does no IO
+        domains-no-transport:
+          # Only http.go adapters inside a domain may touch HTTP.
+          files:
+            - "**/internal/**/*.go"
+            - "!**/internal/platform/**"
+            - "!**/internal/app/**"
+            - "!**/http.go"
+            - "!**/http_*.go"
+            - "!$test"
+          deny:
+            - pkg: github.com/Tony5897/opsgrid/internal/platform/httpx
+              desc: only a domain's http.go adapter may use httpx
+        platform-is-a-leaf:
+          files:
+            - "**/internal/platform/**"
+          deny:
+            - pkg: github.com/Tony5897/opsgrid/internal/app
+              desc: platform packages must not depend on the composition root
+
+  exclusions:
+    generated: strict
+    presets:
+      - std-error-handling
+    rules:
+      - path: internal/platform/database/
+        linters: [forbidigo]
+      - path: _test\.go
+        linters: [gosec, noctx, forbidigo]
+      - path: internal/platform/database/dbtest/
+        linters: [gosec, forbidigo]
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/Tony5897/opsgrid
