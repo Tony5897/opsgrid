@@ -32,3 +32,8 @@ docs/evidence/proofs-report.md.tmp
 !.vscode/extensions.json
 !.vscode/settings.json
 *.swp
+
+# test artifacts
+.vitest/
+apps/web/.vitest/
+__screenshots__/

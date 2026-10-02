@@ -1,0 +1,172 @@
+{
+  "realm": "opsgrid",
+  "displayName": "OpsGrid",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 10,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(3)",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 7200,
+  "ssoSessionMaxLifespan": 43200,
+  "offlineSessionIdleTimeout": 2592000,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "defaultSignatureAlgorithm": "ES256",
+  "internationalizationEnabled": false,
+  "clients": [
+    {
+      "clientId": "opsgrid-bff",
+      "name": "OpsGrid BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "opsgrid-dev-bff-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "consentRequired": false,
+      "redirectUris": [
+        "http://localhost:5173/auth/callback",
+        "http://localhost:8080/auth/callback"
+      ],
+      "webOrigins": [],
+      "rootUrl": "http://localhost:5173",
+      "baseUrl": "/",
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/##http://localhost:8080/",
+        "backchannel.logout.url": "http://api:8080/auth/backchannel-logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "true",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "use.refresh.tokens": "true",
+        "id.token.signed.response.alg": "ES256",
+        "access.token.signed.response.alg": "ES256"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": []
+    }
+  ],
+  "users": [
+    {
+      "username": "owen",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Owen",
+      "lastName": "Park",
+      "email": "owen@cascade.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "opsgrid-dev-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": []
+    },
+    {
+      "username": "dana",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Dana",
+      "lastName": "Reyes",
+      "email": "dana@cascade.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "opsgrid-dev-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": []
+    },
+    {
+      "username": "maria",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Maria",
+      "lastName": "Chen",
+      "email": "maria@cascade.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "opsgrid-dev-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": []
+    },
+    {
+      "username": "james",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "James",
+      "lastName": "Okafor",
+      "email": "james@cascade.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "opsgrid-dev-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": []
+    },
+    {
+      "username": "nina",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nina",
+      "lastName": "Larsen",
+      "email": "nina@northstar.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "opsgrid-dev-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": []
+    },
+    {
+      "username": "alex",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Alex",
+      "lastName": "Morgan",
+      "email": "alex@opsgrid.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "opsgrid-dev-password",
+          "temporary": false
+        }
+      ],
+      "requiredActions": []
+    }
+  ]
+}
