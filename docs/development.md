@@ -166,9 +166,19 @@ Conventions and the rules CI enforces are in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## 9. Continuous integration
 
+**Status (temporary):** GitHub Actions is **disabled** for this repository (Settings → Actions → permissions), and the required status check **CI passed** has been removed from `main` branch protection. Workflow files remain in `.github/workflows/` unchanged. Until Actions is re-enabled, treat the local gate as mandatory before every push:
+
+```bash
+make lint test test-race test-integration test-e2e
+# or, for the pre-E2E subset CI normally runs first:
+make check
+```
+
+When Actions returns: re-enable repository Actions, confirm a green run of `ci.yml`, then restore **CI passed** as a required check on `main`.
+
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | PRs, `main` | Go lint/race/vuln · integration · web lint/typecheck/tests/stories/build budget · contract (Redocly, generated code, oasdiff) · squawk · gitleaks + OSV · image build + Trivy · full-stack E2E. Single required check: **CI passed** |
+| `ci.yml` | PRs, `main` | Go lint/race/vuln · integration · web lint/typecheck/tests/stories/build budget · contract (Redocly, generated code, oasdiff) · squawk · gitleaks + OSV · image build + Trivy · full-stack E2E. Designed required check: **CI passed** |
 | `release.yml` | `main` | Multi-arch image to `ghcr.io/<owner>/opsgrid` (`sha-…`, `edge`), SPDX SBOM, cosign keyless signature, SLSA provenance |
 | `codeql.yml` | PRs, `main`, weekly | Go + TypeScript security analysis |
 | `scorecard.yml` | `main`, weekly | OpenSSF Scorecard |
@@ -187,8 +197,8 @@ cosign verify ghcr.io/tony5897/opsgrid:edge \
 gh attestation verify oci://ghcr.io/tony5897/opsgrid:edge -R Tony5897/opsgrid
 ```
 
-**After pushing to GitHub for the first time**, in the repository settings:
-- *Branches → Add rule for `main`*: require PRs, require status check **CI passed**, require linear history.
+**Branch protection / security (when CI is healthy again):**
+- *Branches → `main`*: require PRs, require status check **CI passed**, require linear history.
 - *Security*: enable secret scanning, push protection and Dependabot **alerts** (alerts only, not version-update PRs).
 
 ## 10. Troubleshooting
