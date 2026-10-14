@@ -166,7 +166,7 @@ Conventions and the rules CI enforces are in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## 9. Continuous integration
 
-**Status (temporary):** GitHub Actions is **disabled** for this repository (Settings → Actions → permissions), and the required status check **CI passed** has been removed from `main` branch protection. Workflow files remain in `.github/workflows/` unchanged. Until Actions is re-enabled, treat the local gate as mandatory before every push:
+**Status:** GitHub Actions is **enabled** on this public repository using **GitHub-hosted** `ubuntu-24.04` runners (included at no charge for public repos). The required status check **CI passed** stays **off** on `main` until a full `ci.yml` run is green, so a red mark cannot block merges. Still run the local gate before pushing:
 
 ```bash
 make lint test test-race test-integration test-e2e
@@ -174,7 +174,7 @@ make lint test test-race test-integration test-e2e
 make check
 ```
 
-When Actions returns: re-enable repository Actions, confirm a green run of `ci.yml`, then restore **CI passed** as a required check on `main`.
+After the first green `CI passed` job on `main`, restore it as a required branch-protection check. Prefer hosted runners; a self-hosted runner is only worth it if GitHub starts billing minutes—you would need a always-on Linux box with Docker (Compose E2E + testcontainers), not a laptop that sleeps.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
