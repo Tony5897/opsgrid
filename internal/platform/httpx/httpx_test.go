@@ -166,6 +166,40 @@ func TestCSRF(t *testing.T) {
 	}
 }
 
+func TestCSRFWithSkipPaths(t *testing.T) {
+	t.Parallel()
+	mw, err := httpx.CSRFWith(discard, httpx.CSRFOptions{
+		TrustedOrigins: []string{"http://localhost:5173"},
+		SkipPaths:      []string{"/auth/backchannel-logout"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+
+	t.Run("backchannel cross-site without csrf header allowed", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodPost, "http://api.local/auth/backchannel-logout", nil)
+		req.Header.Set("Sec-Fetch-Site", "cross-site")
+		rr := httptest.NewRecorder()
+		ok.ServeHTTP(rr, req)
+		if rr.Code != http.StatusNoContent {
+			t.Fatalf("status = %d, want 204 (body %s)", rr.Code, rr.Body.String())
+		}
+	})
+
+	t.Run("logout same-origin missing csrf header rejected", func(t *testing.T) {
+		t.Parallel()
+		req := httptest.NewRequest(http.MethodPost, "http://api.local/auth/logout", nil)
+		req.Header.Set("Sec-Fetch-Site", "same-origin")
+		rr := httptest.NewRecorder()
+		ok.ServeHTTP(rr, req)
+		if rr.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want 403 (body %s)", rr.Code, rr.Body.String())
+		}
+	})
+}
+
 func TestDecodeJSON(t *testing.T) {
 	t.Parallel()
 	type in struct {

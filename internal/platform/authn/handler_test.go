@@ -1,9 +1,6 @@
 package authn_test
 
 import (
-	"context"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,60 +10,17 @@ import (
 	"github.com/Tony5897/opsgrid/internal/platform/authn"
 )
 
-type fakeOIDC struct {
-	authURL string
-	bundle  authn.TokenBundle
-	exErr   error
-	logout  authn.LogoutClaims
-	logErr  error
-}
-
-func (f *fakeOIDC) Warm(context.Context) error { return nil }
-
-func (f *fakeOIDC) AuthCodeURL(state, nonce, challenge string) string {
-	return f.authURL + "?state=" + state + "&nonce=" + nonce + "&cc=" + challenge
-}
-
-func (f *fakeOIDC) Exchange(context.Context, string, string, string) (authn.TokenBundle, error) {
-	return f.bundle, f.exErr
-}
-
-func (f *fakeOIDC) EndSessionURL(_ context.Context, post string) (string, error) {
-	return "https://idp.example/logout?post=" + post, nil
-}
-
-func (f *fakeOIDC) VerifyLogoutToken(context.Context, string) (authn.LogoutClaims, error) {
-	return f.logout, f.logErr
-}
-
-func discardLog() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}
-
 func TestSanitizeReturnToViaLogin(t *testing.T) {
 	t.Parallel()
-	key := bytes32('a')
-	sealer, err := authn.NewSealer(key, "v1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	oidc := &fakeOIDC{authURL: "https://idp.example/auth"}
-	h := authn.Handler(authn.Options{
-		Provider:     oidc,
-		Store:        nil, // login does not touch the store
-		Sealer:       sealer,
-		Log:          discardLog(),
-		PublicOrigin: "http://localhost:5173",
-		Now:          func() time.Time { return time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC) },
-	})
+	clk := &clock{t: time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)}
+	h := newTestHandler(t, &fakeOIDC{authURL: "https://idp.example/auth"}, nil, 'a', clk)
 
 	cases := []struct {
 		returnTo string
-		wantPath string // path encoded in redirect is IdP; we check cookie set + 302
 	}{
-		{"/dashboard", "/dashboard"},
-		{"https://evil.example/phish", "/"},
-		{"//evil.example", "/"},
+		{"/dashboard"},
+		{"https://evil.example/phish"},
+		{"//evil.example"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.returnTo, func(t *testing.T) {
@@ -90,15 +44,7 @@ func TestSanitizeReturnToViaLogin(t *testing.T) {
 
 func TestLogoutClearsSessionCookie(t *testing.T) {
 	t.Parallel()
-	key := bytes32('b')
-	sealer, _ := authn.NewSealer(key, "v1")
-	h := authn.Handler(authn.Options{
-		Provider:     &fakeOIDC{},
-		Store:        nil,
-		Sealer:       sealer,
-		Log:          discardLog(),
-		PublicOrigin: "http://localhost:5173",
-	})
+	h := newTestHandler(t, &fakeOIDC{}, nil, 'b', nil)
 	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 	req.AddCookie(&http.Cookie{Name: authn.SessionCookieName, Value: "stale"})
 	rr := httptest.NewRecorder()
@@ -119,34 +65,10 @@ func TestLogoutClearsSessionCookie(t *testing.T) {
 
 func TestGetLogoutRejected(t *testing.T) {
 	t.Parallel()
-	key := bytes32('c')
-	sealer, _ := authn.NewSealer(key, "v1")
-	h := authn.Handler(authn.Options{
-		Provider:     &fakeOIDC{},
-		Sealer:       sealer,
-		Log:          discardLog(),
-		PublicOrigin: "http://localhost:5173",
-	})
+	h := newTestHandler(t, &fakeOIDC{}, nil, 'c', nil)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/auth/logout", nil))
 	if rr.Code != http.StatusMethodNotAllowed && rr.Code != http.StatusNotFound {
 		t.Fatalf("GET logout must not succeed, got %d", rr.Code)
 	}
-}
-
-func bytes32(b byte) []byte {
-	k := make([]byte, 32)
-	for i := range k {
-		k[i] = b
-	}
-	return k
-}
-
-func cookieNamed(rr *httptest.ResponseRecorder, name string) *http.Cookie {
-	for _, c := range rr.Result().Cookies() {
-		if c.Name == name {
-			return c
-		}
-	}
-	return nil
 }

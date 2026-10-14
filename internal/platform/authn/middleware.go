@@ -1,16 +1,23 @@
 package authn
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
+// SessionSource loads and slides BFF sessions. *Store implements it; tests use fakes.
+type SessionSource interface {
+	GetLiveSession(ctx context.Context, idHash []byte, now time.Time) (Session, error)
+	TouchSession(ctx context.Context, idHash []byte, now time.Time, idleTTL, minInterval time.Duration) error
+}
+
 // Middleware loads a live session from the __Host-opsgrid_session cookie and
 // attaches a Principal to the request context. Missing or expired cookies are
 // not errors; protected routes enforce authentication separately.
-func Middleware(store *Store, log *slog.Logger, idleTTL time.Duration, now func() time.Time) func(http.Handler) http.Handler {
+func Middleware(store SessionSource, log *slog.Logger, idleTTL time.Duration, now func() time.Time) func(http.Handler) http.Handler {
 	if now == nil {
 		now = time.Now
 	}
