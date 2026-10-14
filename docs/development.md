@@ -166,7 +166,7 @@ Conventions and the rules CI enforces are in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## 9. Continuous integration
 
-**Status:** GitHub Actions is **enabled** on this public repository using **GitHub-hosted** `ubuntu-24.04` runners (included at no charge for public repos). The required status check **CI passed** stays **off** on `main` until a full `ci.yml` run is green, so a red mark cannot block merges. Still run the local gate before pushing:
+**Status (temporary):** GitHub Actions is **disabled** again at the repository permissions level. A re-enable attempt showed jobs never start: *“account is locked due to a billing issue.”* That blocks **GitHub-hosted** runners even on a public repo (public minutes are free only when the account is in good standing). Required check **CI passed** stays off on `main`. Until the billing lock is cleared (or a self-hosted Linux+Docker runner is online), treat the local gate as mandatory before every push:
 
 ```bash
 make lint test test-race test-integration test-e2e
@@ -174,7 +174,7 @@ make lint test test-race test-integration test-e2e
 make check
 ```
 
-After the first green `CI passed` job on `main`, restore it as a required branch-protection check. Prefer hosted runners; a self-hosted runner is only worth it if GitHub starts billing minutes—you would need a always-on Linux box with Docker (Compose E2E + testcontainers), not a laptop that sleeps.
+**When unblocked:** fix billing at GitHub Settings → Billing, re-enable Actions, confirm a green `ci.yml` on hosted `ubuntu-24.04`, then restore **CI passed**. Self-hosted is Plan B only if hosted stays blocked—needs an always-on Linux host with Docker (not a sleeping laptop).
 
 | Workflow | Trigger | What it does |
 |---|---|---|
