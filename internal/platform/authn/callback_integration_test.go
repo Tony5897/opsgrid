@@ -51,8 +51,8 @@ func TestCallbackCreatesSession(t *testing.T) {
 	if live == nil || live.Value == "" {
 		t.Fatal("missing session cookie")
 	}
-	if !live.Secure || !live.HttpOnly || live.SameSite != http.SameSiteLaxMode {
-		t.Fatalf("cookie flags: secure=%v httpOnly=%v sameSite=%v", live.Secure, live.HttpOnly, live.SameSite)
+	if !live.Secure || !live.HttpOnly || live.SameSite != http.SameSiteLaxMode || live.Path != "/" {
+		t.Fatalf("cookie flags: secure=%v httpOnly=%v sameSite=%v path=%q", live.Secure, live.HttpOnly, live.SameSite, live.Path)
 	}
 	sess, err := store.GetLiveSession(ctx, authn.HashSessionID(live.Value), clk.Now())
 	if err != nil {

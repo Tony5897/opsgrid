@@ -2,6 +2,7 @@ package authn_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,6 +32,9 @@ func TestCallbackRejects(t *testing.T) {
 		if !oidcCookieCleared(rr) {
 			t.Fatal("expected oidc cookie cleared")
 		}
+		if !noSessionCookieSet(rr) {
+			t.Fatal("session cookie must not be set")
+		}
 	})
 
 	t.Run("bad_state", func(t *testing.T) {
@@ -47,12 +51,7 @@ func TestCallbackRejects(t *testing.T) {
 		if oidc.exchangeCalls.Load() != 0 {
 			t.Fatal("Exchange must not be called")
 		}
-		if !noSessionCookieSet(rr) {
-			t.Fatal("session cookie must not be set")
-		}
-		if !oidcCookieCleared(rr) {
-			t.Fatal("expected oidc cookie cleared")
-		}
+		assertNoSessionAndOIDCCleared(t, rr)
 	})
 
 	t.Run("expired_handshake", func(t *testing.T) {
@@ -70,9 +69,7 @@ func TestCallbackRejects(t *testing.T) {
 		if oidc.exchangeCalls.Load() != 0 {
 			t.Fatal("Exchange must not be called")
 		}
-		if !noSessionCookieSet(rr) {
-			t.Fatal("session cookie must not be set")
-		}
+		assertNoSessionAndOIDCCleared(t, rr)
 	})
 
 	t.Run("missing_code", func(t *testing.T) {
@@ -89,9 +86,27 @@ func TestCallbackRejects(t *testing.T) {
 		if oidc.exchangeCalls.Load() != 0 {
 			t.Fatal("Exchange must not be called")
 		}
-		if !noSessionCookieSet(rr) {
-			t.Fatal("session cookie must not be set")
+		assertNoSessionAndOIDCCleared(t, rr)
+	})
+
+	t.Run("exchange_error", func(t *testing.T) {
+		t.Parallel()
+		oidc := &fakeOIDC{
+			authURL: "https://idp.example/auth",
+			exErr:   errors.New("token endpoint unavailable"),
 		}
+		clk := &clock{t: base}
+		h := newTestHandler(t, oidc, nil, 'k', clk)
+		cookie, state := doLogin(t, h, "/dashboard")
+		req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test&state="+state, nil)
+		req.AddCookie(&http.Cookie{Name: authn.OIDCCookieName, Value: cookie})
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		assertCallbackReject(t, rr, http.StatusUnauthorized, apperr.CodeAuthenticationRequired)
+		if oidc.exchangeCalls.Load() != 1 {
+			t.Fatalf("Exchange calls = %d", oidc.exchangeCalls.Load())
+		}
+		assertNoSessionAndOIDCCleared(t, rr)
 	})
 
 	t.Run("empty_refresh_token", func(t *testing.T) {
@@ -114,10 +129,18 @@ func TestCallbackRejects(t *testing.T) {
 		if oidc.exchangeCalls.Load() != 1 {
 			t.Fatalf("Exchange calls = %d", oidc.exchangeCalls.Load())
 		}
-		if !noSessionCookieSet(rr) {
-			t.Fatal("session cookie must not be set")
-		}
+		assertNoSessionAndOIDCCleared(t, rr)
 	})
+}
+
+func assertNoSessionAndOIDCCleared(t *testing.T, rr *httptest.ResponseRecorder) {
+	t.Helper()
+	if !noSessionCookieSet(rr) {
+		t.Fatal("session cookie must not be set")
+	}
+	if !oidcCookieCleared(rr) {
+		t.Fatal("expected oidc cookie cleared")
+	}
 }
 
 func assertCallbackReject(t *testing.T, rr *httptest.ResponseRecorder, wantStatus int, wantCode apperr.Code) {
