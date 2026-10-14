@@ -38,3 +38,10 @@ docs/evidence/proofs-report.md.tmp
 apps/web/.vitest/
 __screenshots__/
 osv-results.json
+
+# Local Compose overrides (intended for machine-specific ports/volumes)
+compose.override.yaml
+
+# Owner/AI progress tracking — keep out of the public tree
+docs/plan/
+docs/evidence/IMPLEMENTATION_STATUS.md
