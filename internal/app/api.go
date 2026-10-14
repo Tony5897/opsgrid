@@ -32,7 +32,7 @@ func RunAPI(ctx context.Context) (err error) {
 
 	rt.health = health.New(2*time.Second, rt.baseChecks(false)...)
 
-	public, err := rt.publicHandler(ctx)
+	public, err := rt.publicHandler()
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (rt *runtime) serveWithInternal(ctx context.Context, public *http.Server) e
 // Pipeline (outermost first): request ID → OTel span → access log → panic
 // recovery → security headers → body limit → CSRF → session authn → routes.
 // Organization resolution and rate limiting arrive later in Gate 1.
-func (rt *runtime) publicHandler(ctx context.Context) (http.Handler, error) {
+func (rt *runtime) publicHandler() (http.Handler, error) {
 	csrf, err := httpx.CSRFWith(rt.log, httpx.CSRFOptions{
 		TrustedOrigins: trustedOrigins(rt.cfg),
 		SkipPaths:      []string{"/auth/backchannel-logout"},
@@ -100,7 +100,8 @@ func (rt *runtime) publicHandler(ctx context.Context) (http.Handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("session sealer: %w", err)
 	}
-	provider, err := authn.NewProvider(ctx, authn.OIDCConfig{
+	// Lazy IdP discovery: API boots without Keycloak (failure matrix).
+	provider, err := authn.NewProvider(authn.OIDCConfig{
 		IssuerURL:    rt.cfg.OIDC.IssuerURL,
 		ProviderURL:  rt.cfg.OIDC.ProviderURL,
 		ClientID:     rt.cfg.OIDC.ClientID,

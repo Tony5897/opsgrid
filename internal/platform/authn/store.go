@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/Tony5897/opsgrid/internal/platform/database"
 )
@@ -28,7 +27,7 @@ func NewStore(db *database.DB) *Store {
 type UserUpsert struct {
 	Issuer      string
 	Subject     string
-	Email       string // empty clears nothing; blank email is stored as NULL
+	Email       string // empty → NULL on insert; on conflict keeps existing email
 	DisplayName string
 }
 
@@ -44,8 +43,11 @@ func (s *Store) UpsertUser(ctx context.Context, in UserUpsert) (uuid.UUID, error
 			INSERT INTO app.users (issuer, subject, email, display_name)
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (issuer, subject) DO UPDATE SET
-				email = EXCLUDED.email,
-				display_name = EXCLUDED.display_name,
+				email = COALESCE(EXCLUDED.email, app.users.email),
+				display_name = CASE
+					WHEN EXCLUDED.display_name = '' THEN app.users.display_name
+					ELSE EXCLUDED.display_name
+				END,
 				updated_at = now()
 			RETURNING id`,
 			in.Issuer, in.Subject, email, in.DisplayName,
@@ -188,10 +190,4 @@ func (s *Store) DeleteSessionsForSubject(ctx context.Context, issuer, subject st
 		return nil
 	})
 	return n, err
-}
-
-// IsUniqueViolation reports a PostgreSQL unique_violation.
-func IsUniqueViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }

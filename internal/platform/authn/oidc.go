@@ -2,11 +2,10 @@ package authn
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -41,50 +40,65 @@ type LogoutClaims struct {
 	Subject string
 }
 
-// Provider wraps go-oidc / oauth2 for the BFF.
+// Provider wraps go-oidc / oauth2 for the BFF. Discovery is lazy so the API
+// can boot when Keycloak is down (failure matrix: existing sessions keep
+// working; only new logins fail).
 type Provider struct {
-	cfg      OIDCConfig
+	cfg OIDCConfig
+
+	mu       sync.Mutex
 	provider *oidc.Provider
 	oauth    oauth2.Config
 	verifier *oidc.IDTokenVerifier
 }
 
-// NewProvider discovers the IdP and builds an OAuth2 config. When IssuerURL
-// and ProviderURL differ (Docker hostname split), discovery uses ProviderURL
-// while token verification expects IssuerURL.
-func NewProvider(ctx context.Context, cfg OIDCConfig) (*Provider, error) {
+// NewProvider validates config and returns a Provider. IdP discovery runs on
+// first Warm / login / callback / logout-token verify (not at construction).
+func NewProvider(cfg OIDCConfig) (*Provider, error) {
 	if cfg.IssuerURL == "" || cfg.ClientID == "" || cfg.RedirectURL == "" {
 		return nil, errors.New("authn: OIDC issuer, client id and redirect URL are required")
 	}
 	if cfg.ProviderURL == "" {
 		cfg.ProviderURL = cfg.IssuerURL
 	}
-	discCtx := ctx
-	if cfg.ProviderURL != cfg.IssuerURL {
-		discCtx = oidc.InsecureIssuerURLContext(ctx, cfg.IssuerURL)
+	return &Provider{cfg: cfg}, nil
+}
+
+// Warm eagerly discovers the IdP (optional; used by tests that need a ready client).
+func (p *Provider) Warm(ctx context.Context) error {
+	return p.ensure(ctx)
+}
+
+func (p *Provider) ensure(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.provider != nil {
+		return nil
 	}
-	p, err := oidc.NewProvider(discCtx, cfg.ProviderURL)
+	discCtx := ctx
+	if p.cfg.ProviderURL != p.cfg.IssuerURL {
+		discCtx = oidc.InsecureIssuerURLContext(ctx, p.cfg.IssuerURL)
+	}
+	prov, err := oidc.NewProvider(discCtx, p.cfg.ProviderURL)
 	if err != nil {
-		return nil, fmt.Errorf("authn: OIDC discovery: %w", err)
+		return fmt.Errorf("authn: OIDC discovery: %w", err)
 	}
 	oauth := oauth2.Config{
-		ClientID:     cfg.ClientID,
-		ClientSecret: cfg.ClientSecret,
-		RedirectURL:  cfg.RedirectURL,
-		Endpoint:     p.Endpoint(),
+		ClientID:     p.cfg.ClientID,
+		ClientSecret: p.cfg.ClientSecret,
+		RedirectURL:  p.cfg.RedirectURL,
+		Endpoint:     prov.Endpoint(),
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email", "offline_access"},
 	}
 	// Prefer server-side token calls against the provider host when discovery
 	// returned public (browser) hostnames that the API container cannot reach.
-	oauth.Endpoint.TokenURL = rewriteHost(oauth.Endpoint.TokenURL, cfg.ProviderURL)
-	oauth.Endpoint.AuthURL = rewriteHost(oauth.Endpoint.AuthURL, cfg.IssuerURL)
+	oauth.Endpoint.TokenURL = rewriteHost(oauth.Endpoint.TokenURL, p.cfg.ProviderURL)
+	oauth.Endpoint.AuthURL = rewriteHost(oauth.Endpoint.AuthURL, p.cfg.IssuerURL)
 
-	return &Provider{
-		cfg:      cfg,
-		provider: p,
-		oauth:    oauth,
-		verifier: p.Verifier(&oidc.Config{ClientID: cfg.ClientID}),
-	}, nil
+	p.provider = prov
+	p.oauth = oauth
+	p.verifier = prov.Verifier(&oidc.Config{ClientID: p.cfg.ClientID})
+	return nil
 }
 
 func rewriteHost(endpoint, base string) string {
@@ -99,6 +113,7 @@ func rewriteHost(endpoint, base string) string {
 }
 
 // AuthCodeURL builds the authorization redirect with PKCE, state and nonce.
+// Call Warm first (handlers do).
 func (p *Provider) AuthCodeURL(state, nonce, challenge string) string {
 	return p.oauth.AuthCodeURL(state,
 		oauth2.SetAuthURLParam("code_challenge", challenge),
@@ -109,6 +124,9 @@ func (p *Provider) AuthCodeURL(state, nonce, challenge string) string {
 
 // Exchange redeems an authorization code and verifies the ID token.
 func (p *Provider) Exchange(ctx context.Context, code, verifier, nonce string) (TokenBundle, error) {
+	if err := p.ensure(ctx); err != nil {
+		return TokenBundle{}, err
+	}
 	tok, err := p.oauth.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
 		return TokenBundle{}, fmt.Errorf("authn: token exchange: %w", err)
@@ -138,7 +156,7 @@ func (p *Provider) Exchange(ctx context.Context, code, verifier, nonce string) (
 		display = claims.PreferredUsername
 	}
 	email := ""
-	if claims.EmailVerified || claims.Email != "" {
+	if claims.EmailVerified && claims.Email != "" {
 		email = claims.Email
 	}
 	return TokenBundle{
@@ -152,7 +170,10 @@ func (p *Provider) Exchange(ctx context.Context, code, verifier, nonce string) (
 }
 
 // EndSessionURL builds the RP-initiated logout redirect.
-func (p *Provider) EndSessionURL(postLogoutRedirect string) (string, error) {
+func (p *Provider) EndSessionURL(ctx context.Context, postLogoutRedirect string) (string, error) {
+	if err := p.ensure(ctx); err != nil {
+		return "", err
+	}
 	var claims struct {
 		EndSessionEndpoint string `json:"end_session_endpoint"`
 	}
@@ -180,86 +201,20 @@ func (p *Provider) EndSessionURL(postLogoutRedirect string) (string, error) {
 	return u.String(), nil
 }
 
-// VerifyLogoutToken validates an OIDC back-channel logout token.
+// VerifyLogoutToken validates an OIDC back-channel logout token using go-oidc's
+// dedicated logout verifier (events claim, no nonce, aud, exp, jti).
 func (p *Provider) VerifyLogoutToken(ctx context.Context, raw string) (LogoutClaims, error) {
-	return parseLogoutJWT(ctx, p.provider, raw, p.cfg.ClientID, p.cfg.IssuerURL)
-}
-
-// parseLogoutJWT verifies the JWT signature via the provider JWKS, then
-// enforces back-channel logout claims (events, no nonce, aud/azp).
-func parseLogoutJWT(ctx context.Context, provider *oidc.Provider, raw, clientID, issuer string) (LogoutClaims, error) {
-	verifier := provider.Verifier(&oidc.Config{
-		ClientID:          clientID,
-		SkipClientIDCheck: false,
-		SkipIssuerCheck:   false,
-		SkipExpiryCheck:   false,
-	})
-	// Logout tokens fail standard ID token verification when "nonce" is
-	// required absent — go-oidc does not require nonce on Verify. The
-	// events claim distinguishes logout tokens; we reject ID tokens that
-	// lack it.
-	idt, err := verifier.Verify(ctx, raw)
-	if err != nil {
-		// Some IdPs set azp instead of a single aud; retry with skip client
-		// check and validate aud/azp manually from raw claims.
-		verifier = provider.Verifier(&oidc.Config{
-			SkipClientIDCheck: true,
-			SkipIssuerCheck:   false,
-		})
-		idt, err = verifier.Verify(ctx, raw)
-		if err != nil {
-			return LogoutClaims{}, fmt.Errorf("authn: logout token verify: %w", err)
-		}
-	}
-	if idt.Issuer != issuer && !strings.EqualFold(idt.Issuer, issuer) {
-		return LogoutClaims{}, fmt.Errorf("authn: logout token issuer mismatch")
-	}
-	var claims struct {
-		Aud    any            `json:"aud"`
-		Azp    string         `json:"azp"`
-		Events map[string]any `json:"events"`
-		Nonce  string         `json:"nonce"`
-		Sub    string         `json:"sub"`
-	}
-	if err := idt.Claims(&claims); err != nil {
+	if err := p.ensure(ctx); err != nil {
 		return LogoutClaims{}, err
 	}
-	if claims.Nonce != "" {
-		return LogoutClaims{}, errors.New("authn: logout token must not contain nonce")
-	}
-	if _, ok := claims.Events["http://schemas.openid.net/event/backchannel-logout"]; !ok {
-		return LogoutClaims{}, errors.New("authn: logout token missing backchannel-logout event")
-	}
-	if claims.Sub == "" {
-		return LogoutClaims{}, errors.New("authn: logout token missing sub")
-	}
-	if !audienceIncludes(claims.Aud, clientID) && claims.Azp != clientID {
-		return LogoutClaims{}, errors.New("authn: logout token audience mismatch")
-	}
-	return LogoutClaims{Issuer: idt.Issuer, Subject: claims.Sub}, nil
-}
-
-func audienceIncludes(aud any, clientID string) bool {
-	switch v := aud.(type) {
-	case string:
-		return v == clientID
-	case []any:
-		for _, a := range v {
-			if s, ok := a.(string); ok && s == clientID {
-				return true
-			}
-		}
-	case []string:
-		for _, s := range v {
-			if s == clientID {
-				return true
-			}
-		}
-	}
-	// Fallback: re-marshal unusual shapes
-	b, err := json.Marshal(aud)
+	lt, err := p.verifier.VerifyLogout(ctx, raw)
 	if err != nil {
-		return false
+		return LogoutClaims{}, fmt.Errorf("authn: logout token verify: %w", err)
 	}
-	return strings.Contains(string(b), clientID)
+	// We match sessions by (issuer, subject). sid-only tokens need an idp_sid
+	// column (not yet); Keycloak's configured client includes sub.
+	if lt.Subject == "" {
+		return LogoutClaims{}, errors.New("authn: logout token without sub is not supported yet")
+	}
+	return LogoutClaims{Issuer: lt.Issuer, Subject: lt.Subject}, nil
 }

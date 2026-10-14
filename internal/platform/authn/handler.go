@@ -2,6 +2,7 @@ package authn
 
 import (
 	"context"
+	"crypto/subtle"
 	"log/slog"
 	"net"
 	"net/http"
@@ -15,9 +16,10 @@ import (
 
 // OIDCClient is the IdP surface used by auth handlers (real: *Provider).
 type OIDCClient interface {
+	Warm(ctx context.Context) error
 	AuthCodeURL(state, nonce, challenge string) string
 	Exchange(ctx context.Context, code, verifier, nonce string) (TokenBundle, error)
-	EndSessionURL(postLogoutRedirect string) (string, error)
+	EndSessionURL(ctx context.Context, postLogoutRedirect string) (string, error)
 	VerifyLogoutToken(ctx context.Context, raw string) (LogoutClaims, error)
 }
 
@@ -48,8 +50,9 @@ func Handler(opts Options) http.Handler {
 	h := &handlers{opts: opts}
 	mux.HandleFunc("GET /auth/login", h.login)
 	mux.HandleFunc("GET /auth/callback", h.callback)
+	// POST only: GET would bypass CSRF (safe-method exemption) and enable
+	// cross-site logout.
 	mux.HandleFunc("POST /auth/logout", h.logout)
-	mux.HandleFunc("GET /auth/logout", h.logout)
 	mux.HandleFunc("POST /auth/backchannel-logout", h.backchannel)
 	return mux
 }
@@ -59,6 +62,11 @@ type handlers struct {
 }
 
 func (h *handlers) login(w http.ResponseWriter, r *http.Request) {
+	if err := h.opts.Provider.Warm(r.Context()); err != nil {
+		h.opts.Log.WarnContext(r.Context(), "oidc unavailable", slog.Any("error", err))
+		httpx.WriteError(w, r, h.opts.Log, apperr.New(apperr.CodeDependencyUnavailable, "Identity provider is unavailable."))
+		return
+	}
 	returnTo := sanitizeReturnTo(r.URL.Query().Get("returnTo"), h.opts.PublicOrigin)
 	hs, challenge, err := newHandshake(returnTo, h.opts.Now())
 	if err != nil {
@@ -94,7 +102,8 @@ func (h *handlers) callback(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, h.opts.Log, apperr.New(apperr.CodeAuthenticationRequired, "Login session expired. Try again."))
 		return
 	}
-	if r.URL.Query().Get("state") != hs.State {
+	gotState := r.URL.Query().Get("state")
+	if subtle.ConstantTimeCompare([]byte(gotState), []byte(hs.State)) != 1 {
 		httpx.WriteError(w, r, h.opts.Log, apperr.New(apperr.CodeAuthenticationRequired, "Invalid login state."))
 		return
 	}
@@ -123,6 +132,10 @@ func (h *handlers) callback(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, h.opts.Log, apperr.Wrap(err, apperr.CodeInternal, "Could not create user."))
 		return
 	}
+	// Rotate: delete any prior session bound to this browser cookie.
+	if prev, err := r.Cookie(SessionCookieName); err == nil && prev.Value != "" {
+		_ = h.opts.Store.DeleteSession(r.Context(), HashSessionID(prev.Value))
+	}
 	rawID, idHash, err := NewSessionID()
 	if err != nil {
 		httpx.WriteError(w, r, h.opts.Log, apperr.Wrap(err, apperr.CodeInternal, "Could not create session."))
@@ -147,10 +160,9 @@ func (h *handlers) callback(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, h.opts.Log, apperr.Wrap(err, apperr.CodeInternal, "Could not create session."))
 		return
 	}
-	// Session fixation: always issue a fresh id; any prior cookie is discarded.
 	ClearSessionCookie(w)
 	SetSessionCookie(w, rawID, h.opts.AbsoluteTTL)
-	http.Redirect(w, r, hs.ReturnTo, http.StatusFound)
+	http.Redirect(w, r, sanitizeReturnTo(hs.ReturnTo, h.opts.PublicOrigin), http.StatusFound)
 }
 
 func (h *handlers) logout(w http.ResponseWriter, r *http.Request) {
@@ -162,8 +174,9 @@ func (h *handlers) logout(w http.ResponseWriter, r *http.Request) {
 	ClearSessionCookie(w)
 	ClearOIDCCookie(w)
 	postLogout := strings.TrimRight(h.opts.PublicOrigin, "/") + "/"
-	endURL, err := h.opts.Provider.EndSessionURL(postLogout)
+	endURL, err := h.opts.Provider.EndSessionURL(r.Context(), postLogout)
 	if err != nil {
+		// Local session already cleared; IdP outage must not block logout.
 		http.Redirect(w, r, postLogout, http.StatusFound)
 		return
 	}
@@ -197,31 +210,33 @@ func (h *handlers) backchannel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// sanitizeReturnTo allows only same-origin relative paths (open-redirect safe).
+// sanitizeReturnTo allows only same-app relative paths (open-redirect safe).
 func sanitizeReturnTo(raw, publicOrigin string) string {
-	fallback := "/"
+	const fallback = "/"
 	if raw == "" {
 		return fallback
 	}
-	if strings.HasPrefix(raw, "/") && !strings.HasPrefix(raw, "//") {
-		return raw
+	if u, err := url.Parse(raw); err == nil && u.IsAbs() {
+		origin, err := url.Parse(publicOrigin)
+		if err != nil {
+			return fallback
+		}
+		if !strings.EqualFold(u.Scheme, origin.Scheme) || !strings.EqualFold(u.Host, origin.Host) {
+			return fallback
+		}
+		raw = u.RequestURI()
+		if raw == "" {
+			return fallback
+		}
 	}
-	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" {
+	if !strings.HasPrefix(raw, "/") || strings.HasPrefix(raw, "//") {
 		return fallback
 	}
-	origin, err := url.Parse(publicOrigin)
-	if err != nil {
+	// Reject escapes that can confuse browsers or split headers.
+	if strings.ContainsAny(raw, "\\\x00\r\n\t") || strings.Contains(raw, "://") {
 		return fallback
 	}
-	if !strings.EqualFold(u.Scheme, origin.Scheme) || !strings.EqualFold(u.Host, origin.Host) {
-		return fallback
-	}
-	path := u.RequestURI()
-	if path == "" {
-		return fallback
-	}
-	return path
+	return raw
 }
 
 func clientIP(r *http.Request) string {

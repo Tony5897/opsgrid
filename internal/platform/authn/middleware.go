@@ -29,10 +29,13 @@ func Middleware(store *Store, log *slog.Logger, idleTTL time.Duration, now func(
 			t := now()
 			sess, err := store.GetLiveSession(r.Context(), hash, t)
 			if err != nil {
-				if !errors.Is(err, ErrSessionNotFound) {
+				if errors.Is(err, ErrSessionNotFound) {
+					ClearSessionCookie(w)
+				} else {
+					// Do not clear the cookie on transient DB errors — that would
+					// force a re-login for an infrastructure blip.
 					log.WarnContext(r.Context(), "session lookup failed", slog.Any("error", err))
 				}
-				ClearSessionCookie(w)
 				next.ServeHTTP(w, r)
 				return
 			}

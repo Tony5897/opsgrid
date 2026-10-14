@@ -21,6 +21,8 @@ type fakeOIDC struct {
 	logErr  error
 }
 
+func (f *fakeOIDC) Warm(context.Context) error { return nil }
+
 func (f *fakeOIDC) AuthCodeURL(state, nonce, challenge string) string {
 	return f.authURL + "?state=" + state + "&nonce=" + nonce + "&cc=" + challenge
 }
@@ -29,7 +31,7 @@ func (f *fakeOIDC) Exchange(context.Context, string, string, string) (authn.Toke
 	return f.bundle, f.exErr
 }
 
-func (f *fakeOIDC) EndSessionURL(post string) (string, error) {
+func (f *fakeOIDC) EndSessionURL(_ context.Context, post string) (string, error) {
 	return "https://idp.example/logout?post=" + post, nil
 }
 
@@ -97,7 +99,7 @@ func TestLogoutClearsSessionCookie(t *testing.T) {
 		Log:          discardLog(),
 		PublicOrigin: "http://localhost:5173",
 	})
-	req := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 	req.AddCookie(&http.Cookie{Name: authn.SessionCookieName, Value: "stale"})
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -112,6 +114,23 @@ func TestLogoutClearsSessionCookie(t *testing.T) {
 	}
 	if !cleared {
 		t.Fatal("session cookie not cleared")
+	}
+}
+
+func TestGetLogoutRejected(t *testing.T) {
+	t.Parallel()
+	key := bytes32('c')
+	sealer, _ := authn.NewSealer(key, "v1")
+	h := authn.Handler(authn.Options{
+		Provider:     &fakeOIDC{},
+		Sealer:       sealer,
+		Log:          discardLog(),
+		PublicOrigin: "http://localhost:5173",
+	})
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/auth/logout", nil))
+	if rr.Code != http.StatusMethodNotAllowed && rr.Code != http.StatusNotFound {
+		t.Fatalf("GET logout must not succeed, got %d", rr.Code)
 	}
 }
 
