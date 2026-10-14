@@ -6,4 +6,4 @@ OpsGrid is a portfolio project, but security reports are taken seriously.
 - Include affected endpoint/component, reproduction steps and impact. Tenant-isolation findings are the highest priority.
 - Expect an acknowledgement within 7 days.
 
-Security design: see `docs/security/` (threat model, permission matrix, ASVS 5.0.0 verification), produced during Gate 9.
+Security design artifacts (threat model, permission matrix, ASVS 5.0.0 verification) land under `docs/security/` at Gate 9; until then, architecture and tenancy intent live in the [architecture overview](docs/architecture/overview.md) and [evidence ledger](docs/evidence/ledger.md).
