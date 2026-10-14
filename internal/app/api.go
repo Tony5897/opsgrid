@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Tony5897/opsgrid/internal/api"
 	"github.com/Tony5897/opsgrid/internal/platform/apperr"
+	"github.com/Tony5897/opsgrid/internal/platform/authn"
 	"github.com/Tony5897/opsgrid/internal/platform/config"
 	"github.com/Tony5897/opsgrid/internal/platform/health"
 	"github.com/Tony5897/opsgrid/internal/platform/httpx"
@@ -30,7 +32,7 @@ func RunAPI(ctx context.Context) (err error) {
 
 	rt.health = health.New(2*time.Second, rt.baseChecks(false)...)
 
-	public, err := rt.publicHandler()
+	public, err := rt.publicHandler(ctx)
 	if err != nil {
 		return err
 	}
@@ -83,13 +85,42 @@ func (rt *runtime) serveWithInternal(ctx context.Context, public *http.Server) e
 // publicHandler builds the public route table and middleware pipeline.
 //
 // Pipeline (outermost first): request ID → OTel span → access log → panic
-// recovery → security headers → body limit → CSRF → routes. Authentication,
-// organization resolution and rate limiting are added in Gate 1.
-func (rt *runtime) publicHandler() (http.Handler, error) {
-	csrf, err := httpx.CSRF(rt.log, trustedOrigins(rt.cfg)...)
+// recovery → security headers → body limit → CSRF → session authn → routes.
+// Organization resolution and rate limiting arrive later in Gate 1.
+func (rt *runtime) publicHandler(ctx context.Context) (http.Handler, error) {
+	csrf, err := httpx.CSRFWith(rt.log, httpx.CSRFOptions{
+		TrustedOrigins: trustedOrigins(rt.cfg),
+		SkipPaths:      []string{"/auth/backchannel-logout"},
+	})
 	if err != nil {
 		return nil, err
 	}
+
+	sealer, err := authn.NewSealer(rt.cfg.Session.EncryptionKey, rt.cfg.Session.EncryptionKeyID)
+	if err != nil {
+		return nil, fmt.Errorf("session sealer: %w", err)
+	}
+	provider, err := authn.NewProvider(ctx, authn.OIDCConfig{
+		IssuerURL:    rt.cfg.OIDC.IssuerURL,
+		ProviderURL:  rt.cfg.OIDC.ProviderURL,
+		ClientID:     rt.cfg.OIDC.ClientID,
+		ClientSecret: rt.cfg.OIDC.ClientSecret,
+		RedirectURL:  rt.cfg.OIDC.RedirectURL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("oidc provider: %w", err)
+	}
+	store := authn.NewStore(rt.db)
+	authHandler := authn.Handler(authn.Options{
+		Provider:     provider,
+		Store:        store,
+		Sealer:       sealer,
+		Log:          rt.log,
+		PublicOrigin: rt.cfg.HTTP.PublicOrigin,
+		AbsoluteTTL:  rt.cfg.Session.AbsoluteTTL,
+		IdleTTL:      rt.cfg.Session.IdleTTL,
+	})
+	sessionMW := authn.Middleware(store, rt.log, rt.cfg.Session.IdleTTL, nil)
 
 	apiMux := http.NewServeMux()
 	// Unknown /v1 routes answer with a problem document, never the SPA.
@@ -102,12 +133,19 @@ func (rt *runtime) publicHandler() (http.Handler, error) {
 		httpx.SecurityHeaders(rt.cfg.IsProduction(), ""),
 		httpx.MaxBytes(rt.cfg.HTTP.MaxBodyBytes),
 		csrf,
+		sessionMW,
+	)
+	authChain := httpx.Chain(authHandler,
+		httpx.SecurityHeaders(rt.cfg.IsProduction(), ""),
+		httpx.MaxBytes(rt.cfg.HTTP.MaxBodyBytes),
+		csrf,
 	)
 	spa := httpx.Chain(webui.Handler("/v1/", "/auth/"),
 		httpx.SecurityHeaders(rt.cfg.IsProduction(), webui.CSP(nil, nil)),
 	)
 
 	root := http.NewServeMux()
+	root.Handle("/auth/", authChain)
 	root.Handle("/v1/", apiChain)
 	root.Handle("/", spa)
 

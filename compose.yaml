@@ -134,10 +134,22 @@ services:
     <<: *app
     command: ["/usr/local/bin/api"]
     entrypoint: []
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+      keycloak: { condition: service_healthy }
     environment:
       <<: *app-env
       OTEL_SERVICE_NAME: opsgrid-api
       DATABASE_URL: postgres://opsgrid_app:${OPSGRID_APP_PASSWORD:-opsgrid-dev-app}@postgres:5432/opsgrid?sslmode=disable
+      OIDC_ISSUER_URL: http://localhost:8180/realms/opsgrid
+      OIDC_PROVIDER_URL: http://keycloak:8080/realms/opsgrid
+      OIDC_CLIENT_ID: opsgrid-bff
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-opsgrid-dev-bff-secret}
+      OIDC_REDIRECT_URL: http://localhost:5173/auth/callback
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY:-b3BzZ3JpZC1kZXYtc2Vzc2lvbi1rZXktMzJieXRlcyE=}
+      SESSION_ENCRYPTION_KEY_ID: v1
     ports: ["127.0.0.1:8080:8080", "127.0.0.1:9090:9090"]
 
   worker:

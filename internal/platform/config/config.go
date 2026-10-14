@@ -6,6 +6,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -35,6 +36,25 @@ type Config struct {
 	Redis     Redis
 	Telemetry Telemetry
 	Log       Log
+	OIDC      OIDC
+	Session   Session
+}
+
+// OIDC is the confidential BFF client (ADR-006). Required for RoleAPI.
+type OIDC struct {
+	IssuerURL    string // iss claim / browser-facing realm URL
+	ProviderURL  string // discovery + token host (may differ inside Compose)
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+}
+
+// Session is server-side BFF session storage (ADR-013).
+type Session struct {
+	EncryptionKey   []byte
+	EncryptionKeyID string
+	AbsoluteTTL     time.Duration
+	IdleTTL         time.Duration
 }
 
 type HTTP struct {
@@ -136,6 +156,32 @@ func LoadFrom(role Role, lookup LookupFunc, readFile ReadFileFunc) (Config, erro
 			Level:  r.level("LOG_LEVEL", slog.LevelInfo),
 			Format: r.str("LOG_FORMAT", "json"),
 		},
+		OIDC: OIDC{
+			IssuerURL:    r.str("OIDC_ISSUER_URL", ""),
+			ProviderURL:  r.str("OIDC_PROVIDER_URL", ""),
+			ClientID:     r.str("OIDC_CLIENT_ID", "opsgrid-bff"),
+			ClientSecret: r.secret("OIDC_CLIENT_SECRET"),
+			RedirectURL:  r.str("OIDC_REDIRECT_URL", ""),
+		},
+		Session: Session{
+			EncryptionKeyID: r.str("SESSION_ENCRYPTION_KEY_ID", "v1"),
+			AbsoluteTTL:     r.duration("SESSION_ABSOLUTE_TTL", 12*time.Hour),
+			IdleTTL:         r.duration("SESSION_IDLE_TTL", 2*time.Hour),
+		},
+	}
+	if key := r.secret("SESSION_ENCRYPTION_KEY"); key != "" {
+		decoded, err := decodeSessionKey(key)
+		if err != nil {
+			r.fail("SESSION_ENCRYPTION_KEY: %v", err)
+		} else {
+			cfg.Session.EncryptionKey = decoded
+		}
+	}
+	if cfg.OIDC.ProviderURL == "" {
+		cfg.OIDC.ProviderURL = cfg.OIDC.IssuerURL
+	}
+	if cfg.OIDC.RedirectURL == "" && cfg.HTTP.PublicOrigin != "" {
+		cfg.OIDC.RedirectURL = strings.TrimRight(cfg.HTTP.PublicOrigin, "/") + "/auth/callback"
 	}
 
 	cfg.validate(role, &r)
@@ -178,6 +224,27 @@ func (c *Config) validate(role Role, r *reader) {
 		requireURL(r, "PUBLIC_ORIGIN", c.HTTP.PublicOrigin, "http", "https")
 		if c.Env == EnvProduction && strings.HasPrefix(c.HTTP.PublicOrigin, "http://") {
 			r.fail("PUBLIC_ORIGIN must use https in production")
+		}
+		requireURL(r, "OIDC_ISSUER_URL", c.OIDC.IssuerURL, "http", "https")
+		requireURL(r, "OIDC_PROVIDER_URL", c.OIDC.ProviderURL, "http", "https")
+		requireURL(r, "OIDC_REDIRECT_URL", c.OIDC.RedirectURL, "http", "https")
+		if c.OIDC.ClientID == "" {
+			r.fail("OIDC_CLIENT_ID is required")
+		}
+		if c.OIDC.ClientSecret == "" {
+			r.fail("OIDC_CLIENT_SECRET is required")
+		}
+		if len(c.Session.EncryptionKey) != 32 {
+			r.fail("SESSION_ENCRYPTION_KEY is required (base64-encoded 32 bytes)")
+		}
+		if c.Session.EncryptionKeyID == "" {
+			r.fail("SESSION_ENCRYPTION_KEY_ID is required")
+		}
+		if c.Session.AbsoluteTTL < time.Minute || c.Session.IdleTTL < time.Minute {
+			r.fail("SESSION_ABSOLUTE_TTL and SESSION_IDLE_TTL must be at least 1m")
+		}
+		if c.Session.IdleTTL > c.Session.AbsoluteTTL {
+			r.fail("SESSION_IDLE_TTL must not exceed SESSION_ABSOLUTE_TTL")
 		}
 	}
 	if c.Database.MinConns < 0 || c.Database.MaxConns < 1 || c.Database.MinConns > c.Database.MaxConns {
@@ -315,6 +382,20 @@ func (r *reader) boolean(name string, def bool) bool {
 		return def
 	}
 	return b
+}
+
+func decodeSessionKey(s string) ([]byte, error) {
+	key, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		key, err = base64.RawStdEncoding.DecodeString(s)
+	}
+	if err != nil {
+		return nil, errors.New("must be base64")
+	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("must decode to 32 bytes, got %d", len(key))
+	}
+	return key, nil
 }
 
 func (r *reader) level(name string, def slog.Level) slog.Level {

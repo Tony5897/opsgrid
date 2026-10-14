@@ -18,8 +18,11 @@ func env(m map[string]string) config.LookupFunc {
 func noFiles(string) ([]byte, error) { return nil, fs.ErrNotExist }
 
 var validAPI = map[string]string{
-	"DATABASE_URL": "postgres://opsgrid_app:pw@localhost:5432/opsgrid",
-	"REDIS_URL":    "redis://localhost:6379/0",
+	"DATABASE_URL":           "postgres://opsgrid_app:pw@localhost:5432/opsgrid",
+	"REDIS_URL":              "redis://localhost:6379/0",
+	"OIDC_ISSUER_URL":        "http://localhost:8180/realms/opsgrid",
+	"OIDC_CLIENT_SECRET":     "opsgrid-dev-bff-secret",
+	"SESSION_ENCRYPTION_KEY": "b3BzZ3JpZC1kZXYtc2Vzc2lvbi1rZXktMzJieXRlcyE=", // 32-byte dev key
 }
 
 func TestLoadDefaults(t *testing.T) {

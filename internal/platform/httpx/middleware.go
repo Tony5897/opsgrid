@@ -206,15 +206,32 @@ func MaxBytes(n int64) Middleware {
 // set custom headers, and the API never grants a CORS preflight.
 const CSRFHeader = "X-OpsGrid-CSRF"
 
+// CSRFOptions configures CSRF defenses (ADR-019).
+type CSRFOptions struct {
+	TrustedOrigins []string
+	// SkipPaths are exact URL paths exempt from CSRF checks (e.g. IdP
+	// back-channel logout, which cannot set X-OpsGrid-CSRF).
+	SkipPaths []string
+}
+
 // CSRF combines Go's Fetch-Metadata based CrossOriginProtection with a
 // required custom header on unsafe methods. trustedOrigins lists origins
 // (e.g. the Vite dev server) allowed to make cross-origin unsafe requests.
 func CSRF(log *slog.Logger, trustedOrigins ...string) (Middleware, error) {
+	return CSRFWith(log, CSRFOptions{TrustedOrigins: trustedOrigins})
+}
+
+// CSRFWith is CSRF with explicit options (path skips for back-channel logout).
+func CSRFWith(log *slog.Logger, opts CSRFOptions) (Middleware, error) {
 	cop := http.NewCrossOriginProtection()
-	for _, o := range trustedOrigins {
+	for _, o := range opts.TrustedOrigins {
 		if err := cop.AddTrustedOrigin(o); err != nil {
 			return nil, fmt.Errorf("csrf trusted origin %q: %w", o, err)
 		}
+	}
+	skip := make(map[string]struct{}, len(opts.SkipPaths))
+	for _, p := range opts.SkipPaths {
+		skip[p] = struct{}{}
 	}
 	reject := func(w http.ResponseWriter, r *http.Request, reason string) {
 		log.WarnContext(r.Context(), "csrf rejected", slog.String("reason", reason))
@@ -222,6 +239,10 @@ func CSRF(log *slog.Logger, trustedOrigins ...string) (Middleware, error) {
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, ok := skip[r.URL.Path]; ok {
+				next.ServeHTTP(w, r)
+				return
+			}
 			if isSafeMethod(r.Method) {
 				next.ServeHTTP(w, r)
 				return

@@ -52,7 +52,7 @@ Then open **http://localhost:8080**.
 | **storage-init** | one-shot | Idempotently provisions Garage (layout, key, bucket, CORS) | — |
 | **mailpit** | http://localhost:8025 | Catches all outgoing email | — |
 
-Demo users exist in Keycloak's `opsgrid` realm (`owen`, `dana`, `maria`, `james`, `nina`, `alex`, all with password `opsgrid-dev-password`). Signing in to OpsGrid with them arrives in Gate 1. Today you can only sign in to Keycloak's account console at http://localhost:8180/realms/opsgrid/account.
+Demo users exist in Keycloak's `opsgrid` realm (`owen`, `dana`, `maria`, `james`, `nina`, `alex`, all with password `opsgrid-dev-password`). The API exposes the OIDC BFF at `/auth/login`, `/auth/callback`, `/auth/logout`, and `/auth/backchannel-logout` (Gate 1). With the stack up, open http://localhost:8080/auth/login (or http://localhost:5173/auth/login via `make web-dev`) and sign in as a demo user. `/v1/me` and org-aware UX arrive in later Gate 1 slices.
 
 ### Observability (`make dev-obs`)
 
