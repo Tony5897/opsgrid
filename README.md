@@ -25,7 +25,7 @@ Dispatchers drag work orders onto technicians' schedules on a live board. The da
 
 ## Stack
 
-Go 1.27 · PostgreSQL 18 · Redis 8 · Keycloak (OIDC, BFF sessions) · Garage/R2 (S3) · React 19 + TypeScript · TanStack Router/Query · Tailwind CSS v4 · OpenAPI 3.1 · OpenTelemetry · Prometheus · Tempo · Loki · Grafana · Docker Compose · GitHub Actions
+Go 1.27 · PostgreSQL 18 · Redis 8 · Keycloak (OIDC, BFF sessions) · Garage/R2 (S3) · React 19 + TypeScript · TanStack Router/Query · Tailwind CSS v4 · OpenAPI 3.1 · OpenTelemetry · Prometheus · Tempo · Loki · Grafana · Docker Compose · GitHub Actions *(workflow suite in-repo; remote runners paused — see [CI](docs/development.md#9-continuous-integration))*
 
 ## Local setup
 

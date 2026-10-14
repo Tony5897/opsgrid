@@ -166,7 +166,9 @@ Conventions and the rules CI enforces are in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## 9. Continuous integration
 
-**Status (temporary):** GitHub Actions is **disabled** again at the repository permissions level. A re-enable attempt showed jobs never start: *“account is locked due to a billing issue.”* That blocks **GitHub-hosted** runners even on a public repo (public minutes are free only when the account is in good standing). Required check **CI passed** stays off on `main`. Until the billing lock is cleared (or a self-hosted Linux+Docker runner is online), treat the local gate as mandatory before every push:
+**Status (temporary):** Remote GitHub Actions runners are **unavailable** (account billing lock — jobs never start, even on a public repo). Repository Actions permissions stay **disabled**, and every workflow’s automatic triggers (`push` / `pull_request` / `schedule` / `merge_group`) are **paused** so the public commit history does not collect red X marks. Workflow YAML remains in `.github/workflows/` as the intended CI/CD suite; each file is `workflow_dispatch`-only until runners work again. Required check **CI passed** stays off on `main`.
+
+Until then, the public verification path is the local gate (same commands CI would run):
 
 ```bash
 make lint test test-race test-integration test-e2e
@@ -174,15 +176,15 @@ make lint test test-race test-integration test-e2e
 make check
 ```
 
-**When unblocked:** fix billing at GitHub Settings → Billing, re-enable Actions, confirm a green `ci.yml` on hosted `ubuntu-24.04`, then restore **CI passed**. Self-hosted is Plan B only if hosted stays blocked—needs an always-on Linux host with Docker (not a sleeping laptop).
+**When unblocked:** clear the billing lock → re-enable repository Actions → restore the auto-triggers commented in each workflow → confirm a green `ci.yml` on hosted `ubuntu-24.04` → restore required **CI passed**. Prefer hosted runners; self-hosted only if hosted stays blocked (always-on Linux + Docker).
 
-| Workflow | Trigger | What it does |
+| Workflow | Trigger (paused → intended) | What it does |
 |---|---|---|
-| `ci.yml` | PRs, `main` | Go lint/race/vuln · integration · web lint/typecheck/tests/stories/build budget · contract (Redocly, generated code, oasdiff) · squawk · gitleaks + OSV · image build + Trivy · full-stack E2E. Designed required check: **CI passed** |
-| `release.yml` | `main` | Multi-arch image to `ghcr.io/<owner>/opsgrid` (`sha-…`, `edge`), SPDX SBOM, cosign keyless signature, SLSA provenance |
-| `codeql.yml` | PRs, `main`, weekly | Go + TypeScript security analysis |
-| `scorecard.yml` | `main`, weekly | OpenSSF Scorecard |
-| `deps-report.yml` | weekly | Updates the *Dependency report* issue (no automated commits, ADR-022) |
+| `ci.yml` | `workflow_dispatch` only → PRs, `main`, merge queue | Go lint/race/vuln · integration · web lint/typecheck/tests/stories/build budget · contract (Redocly, generated code, oasdiff) · squawk · gitleaks + OSV · image build + Trivy · full-stack E2E. Designed required check: **CI passed** |
+| `release.yml` | `workflow_dispatch` only → `main` | Multi-arch image to `ghcr.io/<owner>/opsgrid` (`sha-…`, `edge`), SPDX SBOM, cosign keyless signature, SLSA provenance |
+| `codeql.yml` | `workflow_dispatch` only → PRs, `main`, weekly | Go + TypeScript security analysis |
+| `scorecard.yml` | `workflow_dispatch` only → `main`, weekly | OpenSSF Scorecard |
+| `deps-report.yml` | `workflow_dispatch` only → weekly | Updates the *Dependency report* issue (no automated commits, ADR-022) |
 
 All actions are pinned to full commit SHAs, and every workflow defaults to read-only permissions.
 

@@ -3,9 +3,9 @@ name: Release image
 # Every commit on main produces an immutable, signed image with an SBOM and
 # SLSA build provenance. Deployment is a separate, manually approved step
 # (IMPLEMENTATION_PLAN §9); nothing here deploys or commits.
+# Auto push-to-main trigger paused (same billing-lock reason as ci.yml).
+# Restore `push: branches: [main]` when hosted runners work again.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -2,9 +2,9 @@ name: Dependency report
 
 # Reports available upgrades as a single tracking issue. Upgrades are applied
 # and committed by the maintainer, never by automation (ADR-022).
+# Weekly schedule paused (billing lock on hosted runners). Restore the cron
+# when runners work again.
 on:
-  schedule:
-    - cron: "0 14 * * 1"
   workflow_dispatch:
 
 permissions:

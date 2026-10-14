@@ -1,11 +1,9 @@
 name: CodeQL
 
+# Auto-triggers paused (billing lock on hosted runners). Restore pull_request,
+# push (main), and the weekly schedule when runners work again.
 on:
-  pull_request:
-  push:
-    branches: [main]
-  schedule:
-    - cron: "17 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
