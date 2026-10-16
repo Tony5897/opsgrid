@@ -9,7 +9,7 @@ Everything needed to run, inspect, test and change OpsGrid locally. For *why* th
 | Tool | Version | Notes |
 |---|---|---|
 | Container runtime | Docker Engine 27+ with Compose v2 | OrbStack (recommended on macOS), Docker Desktop, or Colima. Give it ≥ 4 GB RAM (6 GB+ for the observability profile). |
-| Go | 1.27.1 | Pinned in `go.mod`; with `GOTOOLCHAIN=auto` any Go ≥ 1.21 downloads it automatically. |
+| Go | 1.27.2 | Pinned in `go.mod`; with `GOTOOLCHAIN=auto` any Go ≥ 1.21 downloads it automatically. |
 | Node.js | 24 LTS | |
 | pnpm | 12.8.1 | |
 | mise *(optional, recommended)* | latest | Installs exactly the Go/Node/pnpm versions in `mise.toml`: `mise install`. |

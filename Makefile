@@ -8,7 +8,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 MAKEFLAGS += --no-print-directory
 
-export GOTOOLCHAIN := go1.27.1
+export GOTOOLCHAIN := go1.27.2
 GO        ?= go
 GOTOOL    := $(GO) tool -modfile=tools/go.mod
 PNPM      ?= pnpm

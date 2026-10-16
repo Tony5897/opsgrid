@@ -3,7 +3,7 @@
 # One image, four binaries (api, worker, relay, migrate) + healthcheck.
 # Compose and deployments select the binary with `command`.
 
-ARG GO_VERSION=1.27.1
+ARG GO_VERSION=1.27.2
 ARG NODE_VERSION=24
 
 # ---- web: build the SPA ------------------------------------------------------
