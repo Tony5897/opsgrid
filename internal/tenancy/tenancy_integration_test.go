@@ -9,12 +9,15 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Tony5897/opsgrid/internal/platform/apperr"
 	"github.com/Tony5897/opsgrid/internal/platform/database"
 	"github.com/Tony5897/opsgrid/internal/platform/database/dbtest"
 	"github.com/Tony5897/opsgrid/internal/tenancy"
-	"github.com/jackc/pgx/v5"
 )
+
+func TestMain(m *testing.M) { dbtest.Main(m) }
 
 func TestGetOrganizationMembershipGate(t *testing.T) {
 	t.Parallel()

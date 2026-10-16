@@ -10,9 +10,9 @@ export function meQueryOptions(opts?: { redirectOnAuth?: boolean }) {
   return queryOptions({
     queryKey: meKeys.detail(),
     queryFn: async (): Promise<Me> => {
-      const res = await apiFetch<Me>("/v1/me", {
-        redirectOnAuth: opts?.redirectOnAuth,
-      });
+      const init =
+        opts?.redirectOnAuth === undefined ? {} : { redirectOnAuth: opts.redirectOnAuth };
+      const res = await apiFetch<Me>("/v1/me", init);
       return res.data;
     },
     staleTime: 30_000,

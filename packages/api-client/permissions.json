@@ -69,10 +69,5 @@
     "work_order.note_assigned",
     "attachment.upload_assigned"
   ],
-  "viewer": [
-    "customer.read",
-    "asset.read",
-    "work_order.read",
-    "schedule.read"
-  ]
+  "viewer": ["customer.read", "asset.read", "work_order.read", "schedule.read"]
 }

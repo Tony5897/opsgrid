@@ -7,9 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/Tony5897/opsgrid/internal/platform/authn"
 	"github.com/Tony5897/opsgrid/internal/platform/httpx"
-	"github.com/google/uuid"
 )
 
 func TestRequireAuthAllowsMeta(t *testing.T) {

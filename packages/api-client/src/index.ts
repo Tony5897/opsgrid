@@ -6,6 +6,6 @@ export {
   newIdempotencyKey,
   setRedirectOnAuthRequired,
 } from "./fetch.ts";
+export type { Me, MeMembership, MembershipRole, MeUser, Organization } from "./gen/types.gen.ts";
 export type { FieldError, Problem, ProblemCode } from "./problem.ts";
 export { ApiError, NetworkError, toProblem } from "./problem.ts";
-export type { Me, MeMembership, MeUser, MembershipRole, Organization } from "./gen/types.gen.ts";

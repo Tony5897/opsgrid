@@ -14,6 +14,8 @@ import (
 	"github.com/Tony5897/opsgrid/internal/platform/database/dbtest"
 )
 
+func TestMain(m *testing.M) { dbtest.Main(m) }
+
 func TestGetMeReturnsOnlyOwnMemberships(t *testing.T) {
 	t.Parallel()
 	tdb := dbtest.New(t)

@@ -52,17 +52,17 @@ func (a *Authorizer) Can(_ context.Context, p Principal, perm Permission, resour
 	return false
 }
 
+var assignedScope = map[Permission]struct{}{
+	PermissionCustomerReadAssigned:      {},
+	PermissionAssetReadAssigned:         {},
+	PermissionWorkOrderReadAssigned:     {},
+	PermissionWorkOrderStartAssigned:    {},
+	PermissionWorkOrderCompleteAssigned: {},
+	PermissionWorkOrderNoteAssigned:     {},
+	PermissionAttachmentUploadAssigned:  {},
+}
+
 func isAssignedScope(perm Permission) bool {
-	switch perm {
-	case PermissionCustomerReadAssigned,
-		PermissionAssetReadAssigned,
-		PermissionWorkOrderReadAssigned,
-		PermissionWorkOrderStartAssigned,
-		PermissionWorkOrderCompleteAssigned,
-		PermissionWorkOrderNoteAssigned,
-		PermissionAttachmentUploadAssigned:
-		return true
-	default:
-		return false
-	}
+	_, ok := assignedScope[perm]
+	return ok
 }

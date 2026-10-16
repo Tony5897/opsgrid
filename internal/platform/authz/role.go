@@ -4,11 +4,11 @@ package authz
 type Role string
 
 const (
-	RoleOwner       Role = "owner"
-	RoleAdmin       Role = "admin"
-	RoleDispatcher  Role = "dispatcher"
-	RoleTechnician  Role = "technician"
-	RoleViewer      Role = "viewer"
+	RoleOwner      Role = "owner"
+	RoleAdmin      Role = "admin"
+	RoleDispatcher Role = "dispatcher"
+	RoleTechnician Role = "technician"
+	RoleViewer     Role = "viewer"
 )
 
 // ParseRole validates a DB/API role string.

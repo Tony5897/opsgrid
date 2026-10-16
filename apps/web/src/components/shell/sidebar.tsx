@@ -14,12 +14,7 @@ interface SidebarNavProps {
 }
 
 /** Primary navigation list, shared by the desktop rail and the mobile sheet. */
-export function SidebarNav({
-  orgSlug,
-  collapsed,
-  permissions = [],
-  onNavigate,
-}: SidebarNavProps) {
+export function SidebarNav({ orgSlug, collapsed, permissions = [], onNavigate }: SidebarNavProps) {
   const sections = filterNav(permissions);
   return (
     <nav aria-label="Primary" className="flex-1 overflow-y-auto px-2 py-3">

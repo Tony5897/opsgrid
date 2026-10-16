@@ -1,4 +1,4 @@
-import { ApiError, startLogin, type Me } from "@opsgrid/api-client";
+import { ApiError, type Me, startLogin } from "@opsgrid/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRightIcon } from "lucide-react";
@@ -55,12 +55,7 @@ function Landing() {
 
         {!authed ? (
           <div className="flex flex-col items-center gap-3">
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => startLogin("/")}
-              type="button"
-            >
+            <Button variant="primary" size="md" onClick={() => startLogin("/")} type="button">
               Sign in
             </Button>
             {me.isError && !unauthorized ? (

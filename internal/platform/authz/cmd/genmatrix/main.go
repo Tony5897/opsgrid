@@ -40,7 +40,7 @@ func main() {
 }
 
 func writeJSON(path string, byRole map[string][]string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	raw, err := json.MarshalIndent(byRole, "", "  ")
@@ -48,11 +48,11 @@ func writeJSON(path string, byRole map[string][]string) error {
 		return err
 	}
 	raw = append(raw, '\n')
-	return os.WriteFile(path, raw, 0o644)
+	return os.WriteFile(path, raw, 0o600)
 }
 
 func writeMarkdown(path string, roles []authz.Role, byRole map[string][]string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	var b strings.Builder
@@ -65,7 +65,7 @@ func writeMarkdown(path string, roles []authz.Role, byRole map[string][]string) 
 
 	b.WriteString("| Permission |")
 	for _, r := range roles {
-		b.WriteString(fmt.Sprintf(" %s |", r))
+		fmt.Fprintf(&b, " %s |", r)
 	}
 	b.WriteString("\n|---|")
 	for range roles {
@@ -83,11 +83,11 @@ func writeMarkdown(path string, roles []authz.Role, byRole map[string][]string) 
 			if ok {
 				cell = "✓"
 			}
-			b.WriteString(fmt.Sprintf(" %s |", cell))
+			fmt.Fprintf(&b, " %s |", cell)
 		}
 		b.WriteString("\n")
 	}
-	return os.WriteFile(path, []byte(b.String()), 0o644)
+	return os.WriteFile(path, []byte(b.String()), 0o600)
 }
 
 func contains(ss []string, want string) bool {

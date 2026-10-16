@@ -105,7 +105,9 @@ describe("application shell", () => {
   it("hides Platform health without platform.operate", async () => {
     const { screen } = await renderAt("/o/cascade-facilities/dispatch");
     await expect
-      .element(screen.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Dispatch" }))
+      .element(
+        screen.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Dispatch" }),
+      )
       .toBeVisible();
     expect(
       screen.getByRole("navigation", { name: "Primary" }).elements()[0]?.textContent ?? "",

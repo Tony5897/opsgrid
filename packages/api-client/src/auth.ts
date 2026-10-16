@@ -37,7 +37,11 @@ export async function startLogout(): Promise<void> {
       return;
     }
     // Browsers hide cross-origin Location on opaque redirects.
-    if (res.type === "opaqueredirect" || res.status === 0 || (res.status >= 300 && res.status < 400)) {
+    if (
+      res.type === "opaqueredirect" ||
+      res.status === 0 ||
+      (res.status >= 300 && res.status < 400)
+    ) {
       window.location.assign("/");
       return;
     }
