@@ -88,7 +88,10 @@ func (p *Provider) ensure(ctx context.Context) error {
 		ClientSecret: p.cfg.ClientSecret,
 		RedirectURL:  p.cfg.RedirectURL,
 		Endpoint:     prov.Endpoint(),
-		Scopes:       []string{oidc.ScopeOpenID, "profile", "email", "offline_access"},
+		// Regular refresh tokens (use.refresh.tokens on the client) — not
+		// offline_access. Offline tokens need extra Keycloak grants and exceed
+		// our 12h absolute / 2h idle session model (ADR-013).
+		Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
 	}
 	// Prefer server-side token calls against the provider host when discovery
 	// returned public (browser) hostnames that the API container cannot reach.
