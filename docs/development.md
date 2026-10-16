@@ -190,7 +190,7 @@ gh attestation verify oci://ghcr.io/tony5897/opsgrid:edge -R Tony5897/opsgrid
 ```
 
 **Branch protection / security:**
-- *Branches → `main`*: require PRs, require status check **CI passed**, require linear history (turn the required check on after the first green `ci.yml` on hosted runners).
+- *Branches → `main`*: require PRs, require status check **CI passed** (strict), require linear history.
 - *Security*: enable secret scanning, push protection and Dependabot **alerts** (alerts only, not version-update PRs).
 
 ## 10. Troubleshooting
