@@ -79,7 +79,7 @@ make dev        # backend services
 make web-dev    # Vite on http://localhost:5173 (proxies /v1 and /auth to :8080)
 ```
 
-Use **:5173** while editing UI code (instant hot reload) and **:8080** to see the production build exactly as it ships.
+Use **:5173** while editing UI code (instant hot reload) and **:8080** to see the production build exactly as it ships. For Sign-in via Vite, set `PUBLIC_ORIGIN` and `OIDC_REDIRECT_URL` to `http://localhost:5173` (and matching callback) before `make dev`; Compose defaults target **:8080** so E2E and the baked SPA work without overrides.
 
 ### Component workbench
 

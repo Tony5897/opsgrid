@@ -16,7 +16,8 @@ x-app-env: &app-env
   REDIS_URL: redis://redis:6379/0
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   OTEL_EXPORTER_OTLP_INSECURE: "true"
-  PUBLIC_ORIGIN: http://localhost:5173
+  # Default to the Compose-served SPA (:8080). Override to :5173 when using `make web-dev`.
+  PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
   HTTP_ADDR: ":8080"
   HTTP_INTERNAL_ADDR: ":9090"
 
@@ -163,7 +164,7 @@ services:
       OIDC_PROVIDER_URL: http://keycloak:8080/realms/opsgrid
       OIDC_CLIENT_ID: opsgrid-bff
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-opsgrid-dev-bff-secret}
-      OIDC_REDIRECT_URL: http://localhost:5173/auth/callback
+      OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-http://localhost:8080/auth/callback}
       SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY:-b3BzZ3JpZC1kZXYtc2Vzc2lvbi1rZXktMzJieXRlcyE=}
       SESSION_ENCRYPTION_KEY_ID: v1
     ports: ["127.0.0.1:8080:8080", "127.0.0.1:9090:9090"]

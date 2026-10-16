@@ -68,7 +68,12 @@
         "basic",
         "email"
       ],
-      "optionalClientScopes": []
+      "optionalClientScopes": [
+        "offline_access",
+        "address",
+        "phone",
+        "microprofile-jwt"
+      ]
     }
   ],
   "users": [
