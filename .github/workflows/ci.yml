@@ -1,11 +1,11 @@
 name: CI
 
-# Auto-triggers paused: the GitHub account cannot start hosted runners (billing
-# lock). Keep the job graph for portfolio / future re-enable; only manual runs
-# are allowed so accidental re-enable does not paint every push with red X marks.
-# Restore pull_request, push (main), and merge_group when runners work again.
 on:
-  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+  workflow_dispatch: # manual first-green / re-run without a dummy commit
 
 # Least privilege by default; jobs widen only what they need.
 permissions:

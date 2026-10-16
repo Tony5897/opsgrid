@@ -52,7 +52,7 @@ Then open **http://localhost:8080**.
 | **storage-init** | one-shot | Idempotently provisions Garage (layout, key, bucket, CORS) | — |
 | **mailpit** | http://localhost:8025 | Catches all outgoing email | — |
 
-Demo users exist in Keycloak's `opsgrid` realm (`owen`, `dana`, `maria`, `james`, `nina`, `alex`, all with password `opsgrid-dev-password`). The API exposes the OIDC BFF at `/auth/login`, `/auth/callback`, `/auth/logout`, and `/auth/backchannel-logout` (Gate 1). With the stack up, open http://localhost:8080/auth/login (or http://localhost:5173/auth/login via `make web-dev`) and sign in as a demo user. `/v1/me` and org-aware UX arrive in later Gate 1 slices.
+Demo users exist in Keycloak's `opsgrid` realm (`owen`, `dana`, `maria`, `james`, `nina`, `alex`, all with password `opsgrid-dev-password`). Their Keycloak user IDs are pinned in `infra/keycloak/realm-opsgrid.json` so the Compose `seed` job can link memberships by OIDC `sub`. **Changing those IDs requires a Keycloak volume wipe** (`make reset && make dev`); existing Keycloak volumes skip realm re-import. The API exposes the OIDC BFF at `/auth/login`, `/auth/callback`, `/auth/logout`, and `/auth/backchannel-logout`. After seed, `GET /v1/me` returns the caller's orgs; open http://localhost:8080/auth/login (or http://localhost:5173/auth/login via `make web-dev`) and sign in as a demo user.
 
 ### Observability (`make dev-obs`)
 
@@ -166,25 +166,15 @@ Conventions and the rules CI enforces are in [CONTRIBUTING](CONTRIBUTING.md).
 
 ## 9. Continuous integration
 
-**Status (temporary):** Remote GitHub Actions runners are **unavailable** (account billing lock — jobs never start, even on a public repo). Repository Actions permissions stay **disabled**, and every workflow’s automatic triggers (`push` / `pull_request` / `schedule` / `merge_group`) are **paused** so the public commit history does not collect red X marks. Workflow YAML remains in `.github/workflows/` as the intended CI/CD suite; each file is `workflow_dispatch`-only until runners work again. Required check **CI passed** stays off on `main`.
+Hosted GitHub Actions are **on**. Repository Actions permissions are enabled; workflows auto-trigger as listed below. Local verification remains useful (`make check`, `make test-e2e`) before you push.
 
-Until then, the public verification path is the local gate (same commands CI would run):
-
-```bash
-make lint test test-race test-integration test-e2e
-# or, for the pre-E2E subset CI normally runs first:
-make check
-```
-
-**When unblocked:** clear the billing lock → re-enable repository Actions → restore the auto-triggers commented in each workflow → confirm a green `ci.yml` on hosted `ubuntu-24.04` → restore required **CI passed**. Prefer hosted runners; self-hosted only if hosted stays blocked (always-on Linux + Docker).
-
-| Workflow | Trigger (paused → intended) | What it does |
+| Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | `workflow_dispatch` only → PRs, `main`, merge queue | Go lint/race/vuln · integration · web lint/typecheck/tests/stories/build budget · contract (Redocly, generated code, oasdiff) · squawk · gitleaks + OSV · image build + Trivy · full-stack E2E. Designed required check: **CI passed** |
-| `release.yml` | `workflow_dispatch` only → `main` | Multi-arch image to `ghcr.io/<owner>/opsgrid` (`sha-…`, `edge`), SPDX SBOM, cosign keyless signature, SLSA provenance |
-| `codeql.yml` | `workflow_dispatch` only → PRs, `main`, weekly | Go + TypeScript security analysis |
-| `scorecard.yml` | `workflow_dispatch` only → `main`, weekly | OpenSSF Scorecard |
-| `deps-report.yml` | `workflow_dispatch` only → weekly | Updates the *Dependency report* issue (no automated commits, ADR-022) |
+| `ci.yml` | PRs, `main`, merge queue, manual | Go lint/race/vuln · integration · web lint/typecheck/tests/stories/build budget · contract (Redocly, generated code, oasdiff) · squawk · gitleaks + OSV · image build + Trivy · full-stack E2E. Designed required check: **CI passed** |
+| `release.yml` | `main`, manual | Multi-arch image to `ghcr.io/<owner>/opsgrid` (`sha-…`, `edge`), SPDX SBOM, cosign keyless signature, SLSA provenance |
+| `codeql.yml` | PRs, `main`, weekly, manual | Go + TypeScript security analysis |
+| `scorecard.yml` | `main`, weekly, manual | OpenSSF Scorecard |
+| `deps-report.yml` | weekly, manual | Updates the *Dependency report* issue (no automated commits, ADR-022) |
 
 All actions are pinned to full commit SHAs, and every workflow defaults to read-only permissions.
 
@@ -199,8 +189,8 @@ cosign verify ghcr.io/tony5897/opsgrid:edge \
 gh attestation verify oci://ghcr.io/tony5897/opsgrid:edge -R Tony5897/opsgrid
 ```
 
-**Branch protection / security (when CI is healthy again):**
-- *Branches → `main`*: require PRs, require status check **CI passed**, require linear history.
+**Branch protection / security:**
+- *Branches → `main`*: require PRs, require status check **CI passed**, require linear history (turn the required check on after the first green `ci.yml` on hosted runners).
 - *Security*: enable secret scanning, push protection and Dependabot **alerts** (alerts only, not version-update PRs).
 
 ## 10. Troubleshooting

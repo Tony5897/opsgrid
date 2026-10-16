@@ -1,8 +1,10 @@
 name: OpenSSF Scorecard
 
-# Auto-triggers paused (billing lock on hosted runners). Restore push (main)
-# and the weekly schedule when runners work again.
 on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "33 5 * * 1"
   workflow_dispatch:
 
 permissions: read-all
