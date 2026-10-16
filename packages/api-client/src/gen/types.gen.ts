@@ -13,6 +13,36 @@ export type Meta = {
     commit: string;
 };
 
+export type Me = {
+    user: MeUser;
+    memberships: Array<MeMembership>;
+};
+
+export type MeUser = {
+    id: string;
+    email?: string | null;
+    displayName: string;
+};
+
+export type MeMembership = {
+    organizationId: string;
+    slug: string;
+    name: string;
+    role: MembershipRole;
+    /**
+     * Expanded permission strings for this membership's role.
+     */
+    permissions: Array<string>;
+};
+
+export type Organization = {
+    id: string;
+    slug: string;
+    name: string;
+};
+
+export type MembershipRole = 'owner' | 'admin' | 'dispatcher' | 'technician' | 'viewer';
+
 /**
  * Stable, machine-readable error identifier (never renamed).
  */
@@ -41,6 +71,11 @@ export type Problem = {
     errors?: Array<FieldError>;
 };
 
+/**
+ * Organization UUID (not the URL slug used by the SPA).
+ */
+export type OrgId = string;
+
 export type GetMetaData = {
     body?: never;
     path?: never;
@@ -65,3 +100,58 @@ export type GetMetaResponses = {
 };
 
 export type GetMetaResponse = GetMetaResponses[keyof GetMetaResponses];
+
+export type GetMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/me';
+};
+
+export type GetMeErrors = {
+    /**
+     * An RFC 9457 problem document.
+     */
+    default: Problem;
+};
+
+export type GetMeError = GetMeErrors[keyof GetMeErrors];
+
+export type GetMeResponses = {
+    /**
+     * Caller profile.
+     */
+    200: Me;
+};
+
+export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
+
+export type GetOrganizationData = {
+    body?: never;
+    path: {
+        /**
+         * Organization UUID (not the URL slug used by the SPA).
+         */
+        orgId: string;
+    };
+    query?: never;
+    url: '/v1/organizations/{orgId}';
+};
+
+export type GetOrganizationErrors = {
+    /**
+     * An RFC 9457 problem document.
+     */
+    default: Problem;
+};
+
+export type GetOrganizationError = GetOrganizationErrors[keyof GetOrganizationErrors];
+
+export type GetOrganizationResponses = {
+    /**
+     * Organization the caller may access.
+     */
+    200: Organization;
+};
+
+export type GetOrganizationResponse = GetOrganizationResponses[keyof GetOrganizationResponses];

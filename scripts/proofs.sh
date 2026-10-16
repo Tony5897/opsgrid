@@ -34,6 +34,20 @@ run "Missing tenant context is rejected before SQL runs" "RLS fail-closed" \
   go_proof 'TestInTenantTxRequiresOrganization$' ./internal/platform/database/
 run "RLS policy template isolates tenants; denies owner; fails closed" "Tenant confidentiality" \
   go_proof 'TestRLSPolicyTemplateFailsClosed$' ./internal/platform/database/
+run "Organizations/locations RLS fails closed under real tables" "RLS fail-closed" \
+  go_proof 'TestOrganizationsRLSFailsClosed$' ./internal/platform/database/
+run "Tenant tables have RLS enabled+forced; org-leading uniques" "Runtime role hardening" \
+  go_proof 'TestSchemaTenantTablesHaveRLS$' ./internal/platform/database/
+run "Cross-tenant org probe 404; removed member denied next request" "Tenant confidentiality" \
+  go_proof 'TestGetOrganizationMembershipGate$' ./internal/tenancy/
+run "GET /v1/me anonymous → 401 (RequireAuth)" "BFF session authn" \
+  go test -count=1 -run 'TestRequireAuthRejectsAnonymousMe$' ./internal/platform/authn/
+run "GET /v1/me returns only own memberships + permissions" "Authorization" \
+  go_proof 'TestGetMeReturnsOnlyOwnMemberships$' ./internal/identity/
+run "Authz role×permission matrix (owner allow-all, platform.operate)" "Authorization" \
+  go test -count=1 ./internal/platform/authz/
+run "Session ID rotates on login (fixation defense)" "BFF session authn" \
+  go_proof 'TestSessionIDRotatesOnNewLogin$|TestCallbackRotatesPriorSession$' ./internal/platform/authn/
 run "Runtime roles: no superuser/BYPASSRLS/DDL; guard-rail timeouts" "Runtime role hardening" \
   go_proof 'TestRuntimeRolesAreHardened$' ./internal/platform/database/
 run "Serialization failures retried; other errors not" "Transactional safety" \

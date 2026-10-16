@@ -10,12 +10,14 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/Tony5897/opsgrid/internal/api"
+	"github.com/Tony5897/opsgrid/internal/identity"
 	"github.com/Tony5897/opsgrid/internal/platform/apperr"
 	"github.com/Tony5897/opsgrid/internal/platform/authn"
 	"github.com/Tony5897/opsgrid/internal/platform/config"
 	"github.com/Tony5897/opsgrid/internal/platform/health"
 	"github.com/Tony5897/opsgrid/internal/platform/httpx"
 	"github.com/Tony5897/opsgrid/internal/platform/webui"
+	"github.com/Tony5897/opsgrid/internal/tenancy"
 )
 
 // RunAPI runs the HTTP API (which also serves the SPA) until ctx is
@@ -85,8 +87,9 @@ func (rt *runtime) serveWithInternal(ctx context.Context, public *http.Server) e
 // publicHandler builds the public route table and middleware pipeline.
 //
 // Pipeline (outermost first): request ID → OTel span → access log → panic
-// recovery → security headers → body limit → CSRF → session authn → routes.
-// Organization resolution and rate limiting arrive later in Gate 1.
+// recovery → security headers → body limit → CSRF → session authn →
+// require-auth (except /v1/meta) → org resolution (G1) → routes.
+// Rate limiting arrives later (G9).
 func (rt *runtime) publicHandler() (http.Handler, error) {
 	csrf, err := httpx.CSRFWith(rt.log, httpx.CSRFOptions{
 		TrustedOrigins: trustedOrigins(rt.cfg),
@@ -128,13 +131,19 @@ func (rt *runtime) publicHandler() (http.Handler, error) {
 	apiMux.HandleFunc("/v1/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, rt.log, apperr.New(apperr.CodeResourceNotFound, "No such API route."))
 	})
-	routes := api.Handler(&api.Server{}, apiMux, rt.log)
+	tenancySvc := tenancy.New(rt.db)
+	routes := api.Handler(&api.Server{
+		Identity: identity.New(rt.db),
+		Tenancy:  tenancySvc,
+	}, apiMux, rt.log)
 
 	apiChain := httpx.Chain(routes,
 		httpx.SecurityHeaders(rt.cfg.IsProduction(), ""),
 		httpx.MaxBytes(rt.cfg.HTTP.MaxBodyBytes),
 		csrf,
 		sessionMW,
+		authn.RequireAuth(rt.log),
+		tenancy.ResolveOrg(tenancySvc, rt.log),
 	)
 	authChain := httpx.Chain(authHandler,
 		httpx.SecurityHeaders(rt.cfg.IsProduction(), ""),

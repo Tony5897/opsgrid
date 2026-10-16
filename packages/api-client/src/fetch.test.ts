@@ -1,6 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { apiFetch, CSRF_HEADER } from "./fetch.ts";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { apiFetch, CSRF_HEADER, setRedirectOnAuthRequired } from "./fetch.ts";
 import { ApiError, NetworkError } from "./problem.ts";
+
+afterEach(() => {
+  setRedirectOnAuthRequired(true);
+});
 
 function respond(status: number, body: unknown, headers: Record<string, string> = {}) {
   const isJSON = body !== undefined;

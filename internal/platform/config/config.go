@@ -107,6 +107,7 @@ const (
 	RoleWorker  Role = "worker"
 	RoleRelay   Role = "relay"
 	RoleMigrate Role = "migrate"
+	RoleSeed    Role = "seed"
 )
 
 // Load reads configuration for role from the process environment.
@@ -212,6 +213,10 @@ func (c *Config) validate(role Role, r *reader) {
 	switch role {
 	case RoleMigrate:
 		requireURL(r, "MIGRATOR_DATABASE_URL", c.Database.MigratorURL, "postgres", "postgresql")
+		return
+	case RoleSeed:
+		// Seed uses the runtime app role with InTenantTx (never BYPASSRLS).
+		requireURL(r, "DATABASE_URL", c.Database.URL, "postgres", "postgresql")
 		return
 	case RoleAPI, RoleWorker, RoleRelay:
 		requireURL(r, "DATABASE_URL", c.Database.URL, "postgres", "postgresql")

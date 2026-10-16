@@ -73,6 +73,7 @@
   ],
   "users": [
     {
+      "id": "01939b00-0001-7000-8000-000000000001",
       "username": "owen",
       "enabled": true,
       "emailVerified": true,
@@ -89,6 +90,7 @@
       "requiredActions": []
     },
     {
+      "id": "01939b00-0002-7000-8000-000000000002",
       "username": "dana",
       "enabled": true,
       "emailVerified": true,
@@ -105,6 +107,7 @@
       "requiredActions": []
     },
     {
+      "id": "01939b00-0003-7000-8000-000000000003",
       "username": "maria",
       "enabled": true,
       "emailVerified": true,
@@ -121,6 +124,7 @@
       "requiredActions": []
     },
     {
+      "id": "01939b00-0004-7000-8000-000000000004",
       "username": "james",
       "enabled": true,
       "emailVerified": true,
@@ -137,6 +141,7 @@
       "requiredActions": []
     },
     {
+      "id": "01939b00-0005-7000-8000-000000000005",
       "username": "nina",
       "enabled": true,
       "emailVerified": true,
@@ -153,6 +158,7 @@
       "requiredActions": []
     },
     {
+      "id": "01939b00-0006-7000-8000-000000000006",
       "username": "alex",
       "enabled": true,
       "emailVerified": true,

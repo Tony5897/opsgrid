@@ -4,19 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { setPreferences, usePreferences } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
-import { NAV } from "./nav";
+import { filterNav } from "./nav";
 
 interface SidebarNavProps {
   orgSlug: string;
   collapsed: boolean;
+  permissions?: readonly string[];
   onNavigate?: () => void;
 }
 
 /** Primary navigation list, shared by the desktop rail and the mobile sheet. */
-export function SidebarNav({ orgSlug, collapsed, onNavigate }: SidebarNavProps) {
+export function SidebarNav({
+  orgSlug,
+  collapsed,
+  permissions = [],
+  onNavigate,
+}: SidebarNavProps) {
+  const sections = filterNav(permissions);
   return (
     <nav aria-label="Primary" className="flex-1 overflow-y-auto px-2 py-3">
-      {NAV.map((section) => (
+      {sections.map((section) => (
         <div key={section.label} className="mb-4 last:mb-0">
           <h2
             className={cn(
@@ -79,7 +86,13 @@ export function Brand({ collapsed }: { collapsed: boolean }) {
 }
 
 /** Desktop sidebar (md and up). Collapses to an icon rail; state persists per device. */
-export function Sidebar({ orgSlug }: { orgSlug: string }) {
+export function Sidebar({
+  orgSlug,
+  permissions = [],
+}: {
+  orgSlug: string;
+  permissions?: readonly string[];
+}) {
   const { sidebarCollapsed: collapsed } = usePreferences();
   return (
     <aside
@@ -90,7 +103,7 @@ export function Sidebar({ orgSlug }: { orgSlug: string }) {
       )}
     >
       <Brand collapsed={collapsed} />
-      <SidebarNav orgSlug={orgSlug} collapsed={collapsed} />
+      <SidebarNav orgSlug={orgSlug} collapsed={collapsed} permissions={permissions} />
       <div className={cn("border-t border-border p-2", collapsed && "flex justify-center")}>
         <Button
           variant="ghost"

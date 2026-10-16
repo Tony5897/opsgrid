@@ -89,6 +89,10 @@ logs: ## Tail application logs
 migrate: ## Apply migrations (one-shot container)
 	$(COMPOSE) run --rm migrate
 
+.PHONY: seed
+seed: ## Upsert demo orgs/users/memberships (one-shot; needs migrate)
+	$(COMPOSE) run --rm seed
+
 .PHONY: psql
 psql: ## psql as the runtime role (subject to RLS)
 	$(COMPOSE) exec -e PGPASSWORD=$${OPSGRID_APP_PASSWORD:-opsgrid-dev-app} postgres psql -U opsgrid_app -d opsgrid
@@ -177,8 +181,9 @@ check: lint test-race test-integration test-stories ## Everything CI runs before
 ##@ Build & generate
 
 .PHONY: generate
-generate: ## Regenerate code from the OpenAPI contract and SQL
+generate: ## Regenerate code from the OpenAPI contract, authz matrix, and SQL
 	$(GO) generate ./internal/api/...
+	$(GO) generate ./internal/platform/authz/...
 	$(PNPM) --filter @opsgrid/openapi-gen generate
 	@if [ -f sqlc.yaml ]; then $(GOTOOL) sqlc generate; fi
 

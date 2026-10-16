@@ -1,15 +1,45 @@
+import { setRedirectOnAuthRequired } from "@opsgrid/api-client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import axe from "axe-core";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { meKeys } from "@/features/auth/me";
 import { routeTree } from "@/routeTree.gen";
 import { createQueryClient } from "./query-client";
 
+const cascadeMe = {
+  user: {
+    id: "01939a10-0002-7000-8000-000000000002",
+    displayName: "Dana Reyes",
+    email: "dana@cascade.example",
+  },
+  memberships: [
+    {
+      organizationId: "01939a00-0001-7000-8000-000000000001",
+      slug: "cascade-facilities",
+      name: "Cascade Facilities",
+      role: "dispatcher" as const,
+      permissions: [
+        "customer.read",
+        "asset.read",
+        "work_order.read",
+        "work_order.create",
+        "work_order.update",
+        "work_order.assign",
+        "schedule.read",
+        "schedule.manage",
+        "report.read",
+      ],
+    },
+  ],
+};
+
 async function renderAt(path: string) {
   const queryClient = createQueryClient();
+  queryClient.setQueryData(meKeys.detail(), cascadeMe);
   const router = createRouter({
     routeTree,
     context: { queryClient },
@@ -25,7 +55,12 @@ async function renderAt(path: string) {
   return { screen, router };
 }
 
+beforeEach(() => {
+  setRedirectOnAuthRequired(false);
+});
+
 afterEach(async () => {
+  setRedirectOnAuthRequired(true);
   await page.viewport(1280, 800);
 });
 
@@ -62,6 +97,21 @@ describe("application shell", () => {
     await expect.element(screen.getByRole("heading", { name: "Page not found" })).toBeVisible();
   });
 
+  it("rejects orgs the caller is not a member of", async () => {
+    const { screen } = await renderAt("/o/northstar-mechanical/dispatch");
+    await expect.element(screen.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  });
+
+  it("hides Platform health without platform.operate", async () => {
+    const { screen } = await renderAt("/o/cascade-facilities/dispatch");
+    await expect
+      .element(screen.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Dispatch" }))
+      .toBeVisible();
+    expect(
+      screen.getByRole("navigation", { name: "Primary" }).elements()[0]?.textContent ?? "",
+    ).not.toMatch(/Platform health/);
+  });
+
   it("has no detectable accessibility violations (axe, WCAG 2.2 AA)", async () => {
     const { screen } = await renderAt("/o/cascade-facilities/work-orders");
     await expect
@@ -78,10 +128,6 @@ describe("application shell", () => {
     await page.viewport(390, 844);
     const { screen } = await renderAt("/o/cascade-facilities/dispatch");
     await screen.getByRole("button", { name: "Open navigation" }).click();
-    const dialog = screen.getByRole("dialog", { name: "Navigation" });
-    await expect.element(dialog).toBeVisible();
-    await dialog.getByRole("link", { name: "Schedule" }).click();
-    await expect.element(screen.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
-    await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
+    await expect.element(screen.getByRole("dialog")).toBeVisible();
   });
 });

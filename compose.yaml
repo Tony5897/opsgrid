@@ -130,12 +130,28 @@ services:
     healthcheck:
       disable: true
 
+  seed:
+    <<: *app
+    command: ["/usr/local/bin/seed"]
+    entrypoint: []
+    restart: "no"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://opsgrid_app:${OPSGRID_APP_PASSWORD:-opsgrid-dev-app}@postgres:5432/opsgrid?sslmode=disable
+      LOG_FORMAT: json
+      OTEL_SERVICE_NAME: opsgrid-seed
+    healthcheck:
+      disable: true
+
   api:
     <<: *app
     command: ["/usr/local/bin/api"]
     entrypoint: []
     depends_on:
       migrate: { condition: service_completed_successfully }
+      seed: { condition: service_completed_successfully }
       postgres: { condition: service_healthy }
       redis: { condition: service_started }
       keycloak: { condition: service_healthy }

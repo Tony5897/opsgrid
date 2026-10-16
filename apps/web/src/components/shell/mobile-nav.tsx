@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Brand, SidebarNav } from "./sidebar";
 
 /** Below md the sidebar becomes a modal sheet (focus-trapped, Esc closes). */
-export function MobileNav({ orgSlug }: { orgSlug: string }) {
+export function MobileNav({
+  orgSlug,
+  permissions = [],
+}: {
+  orgSlug: string;
+  permissions?: readonly string[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -27,7 +33,12 @@ export function MobileNav({ orgSlug }: { orgSlug: string }) {
               </Button>
             </Dialog.Close>
           </div>
-          <SidebarNav orgSlug={orgSlug} collapsed={false} onNavigate={() => setOpen(false)} />
+          <SidebarNav
+            orgSlug={orgSlug}
+            collapsed={false}
+            permissions={permissions}
+            onNavigate={() => setOpen(false)}
+          />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

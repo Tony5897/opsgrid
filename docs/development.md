@@ -45,6 +45,7 @@ Then open **http://localhost:8080**.
 | **worker** | internal :9090 | Background job consumers (handlers arrive in Gate 6) | — |
 | **relay** | internal :9090 | Transactional-outbox publisher (Gate 6) | — |
 | **migrate** | one-shot | Applies `db/migrations` as the schema owner, then exits | — |
+| **seed** | one-shot | Upserts demo orgs, users, memberships, locations (`make seed`) | runs as `opsgrid_app` via `InTenantTx` (never BYPASSRLS) |
 | **postgres** | localhost:5432 | PostgreSQL 18.6, database `opsgrid` | runtime role `opsgrid_app` / `opsgrid-dev-app`; superuser `postgres` / `opsgrid-dev-superuser` |
 | **redis** | localhost:6379 | Redis 8.10 (AOF persistence) | — |
 | **keycloak** | http://localhost:8180 | OIDC identity provider; realm `opsgrid` | admin console: `admin` / `opsgrid-dev-admin` |

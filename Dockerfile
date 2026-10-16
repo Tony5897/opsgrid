@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -ldflags "-s -w \
         -X github.com/Tony5897/opsgrid/internal/platform/buildinfo.Version=${VERSION} \
         -X github.com/Tony5897/opsgrid/internal/platform/buildinfo.Commit=${COMMIT}" \
-      -o /out/ ./cmd/api ./cmd/worker ./cmd/relay ./cmd/migrate ./cmd/healthcheck
+      -o /out/ ./cmd/api ./cmd/worker ./cmd/relay ./cmd/migrate ./cmd/seed ./cmd/healthcheck
 
 # ---- runtime -------------------------------------------------------------------
 FROM gcr.io/distroless/static-debian13:nonroot

@@ -1,9 +1,18 @@
+import { loginUrl } from "./auth.ts";
 import { ApiError, NetworkError, toProblem } from "./problem.ts";
 
 /** Header the API requires on every unsafe request (ADR-019). */
 export const CSRF_HEADER = "X-OpsGrid-CSRF";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/** When false, 401 does not redirect (unit tests). */
+let redirectOnAuthRequired = true;
+
+/** Test helper: disable/enable the login redirect. */
+export function setRedirectOnAuthRequired(enabled: boolean): void {
+  redirectOnAuthRequired = enabled;
+}
 
 export interface ApiRequestInit extends Omit<RequestInit, "body"> {
   /** JSON-serializable body. */
@@ -12,6 +21,11 @@ export interface ApiRequestInit extends Omit<RequestInit, "body"> {
   idempotencyKey?: string;
   /** Expected entity version for optimistic concurrency (If-Match). */
   ifMatch?: string;
+  /**
+   * When false, 401 / AUTHENTICATION_REQUIRED is thrown without navigating to
+   * login (landing page probes). Default true.
+   */
+  redirectOnAuth?: boolean;
 }
 
 export interface ApiResponse<T> {
@@ -31,7 +45,7 @@ export async function apiFetch<T>(
   init: ApiRequestInit = {},
   fetchImpl: typeof fetch = fetch,
 ): Promise<ApiResponse<T>> {
-  const { json, idempotencyKey, ifMatch, headers: initHeaders, ...rest } = init;
+  const { json, idempotencyKey, ifMatch, redirectOnAuth, headers: initHeaders, ...rest } = init;
   const method = (rest.method ?? (json === undefined ? "GET" : "POST")).toUpperCase();
   const headers = new Headers(initHeaders);
   headers.set("Accept", "application/json, application/problem+json");
@@ -61,10 +75,20 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     const retryAfter = Number(res.headers.get("Retry-After"));
-    throw new ApiError(
+    const err = new ApiError(
       toProblem(res.status, body, requestId),
       Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
     );
+    const shouldRedirect = redirectOnAuth ?? redirectOnAuthRequired;
+    if (
+      shouldRedirect &&
+      typeof window !== "undefined" &&
+      (err.status === 401 || err.code === "AUTHENTICATION_REQUIRED")
+    ) {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      window.location.assign(loginUrl(returnTo));
+    }
+    throw err;
   }
   return {
     data: body as T,

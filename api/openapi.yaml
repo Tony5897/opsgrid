@@ -16,6 +16,8 @@ info:
     - POST commands require `Idempotency-Key`; updates require `If-Match`.
     - Every response carries `X-Request-Id` (`req_` + ULID); quote it when
       reporting problems. It also appears as `requestId` in problem bodies.
+    - Authentication is a BFF session cookie (`__Host-opsgrid_session`). The SPA
+      never sees IdP tokens (ADR-006).
   license:
     name: MIT
     identifier: MIT
@@ -25,6 +27,12 @@ servers:
 tags:
   - name: meta
     description: Service information
+  - name: identity
+    description: Authenticated caller identity and memberships
+  - name: tenancy
+    description: Organizations and membership resolution
+security:
+  - sessionCookie: []
 paths:
   /v1/meta:
     get:
@@ -39,7 +47,57 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Meta" }
         default: { $ref: "#/components/responses/Problem" }
+  /v1/me:
+    get:
+      operationId: getMe
+      tags: [identity]
+      summary: Current user, memberships and permissions
+      description: |
+        Returns the authenticated user and every active organization membership,
+        with permissions expanded from the static role map. Hydrates org name/slug
+        under per-org tenant transactions (ADR-004).
+      responses:
+        "200":
+          description: Caller profile.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        default: { $ref: "#/components/responses/Problem" }
+  /v1/organizations/{orgId}:
+    get:
+      operationId: getOrganization
+      tags: [tenancy]
+      summary: Organization summary for an active member
+      description: |
+        Returns the organization when the caller holds an active membership.
+        Non-members and unknown ids receive 404 TENANT_NOT_FOUND (no existence leak).
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Organization the caller may access.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Organization" }
+        default: { $ref: "#/components/responses/Problem" }
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-opsgrid_session
+      description: |
+        Opaque BFF session secret (HttpOnly, Secure, SameSite=Lax, __Host- prefix).
+        Set by `/auth/callback`; cleared by `/auth/logout`.
+  parameters:
+    OrgId:
+      name: orgId
+      in: path
+      required: true
+      description: Organization UUID (not the URL slug used by the SPA).
+      schema:
+        type: string
+        format: uuid
   responses:
     Problem:
       description: An RFC 9457 problem document.
@@ -55,6 +113,55 @@ components:
         service: { type: string, const: opsgrid }
         version: { type: string, examples: ["v1.0.0", "dev"] }
         commit: { type: string, description: Abbreviated git commit of the build. }
+    Me:
+      type: object
+      additionalProperties: false
+      required: [user, memberships]
+      properties:
+        user: { $ref: "#/components/schemas/MeUser" }
+        memberships:
+          type: array
+          items: { $ref: "#/components/schemas/MeMembership" }
+    MeUser:
+      type: object
+      additionalProperties: false
+      required: [id, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        email:
+          type: [string, "null"]
+          format: email
+        displayName: { type: string }
+    MeMembership:
+      type: object
+      additionalProperties: false
+      required: [organizationId, slug, name, role, permissions]
+      properties:
+        organizationId: { type: string, format: uuid }
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          maxLength: 63
+        name: { type: string }
+        role: { $ref: "#/components/schemas/MembershipRole" }
+        permissions:
+          type: array
+          items: { type: string }
+          description: Expanded permission strings for this membership's role.
+    Organization:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name]
+      properties:
+        id: { type: string, format: uuid }
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          maxLength: 63
+        name: { type: string }
+    MembershipRole:
+      type: string
+      enum: [owner, admin, dispatcher, technician, viewer]
     ProblemCode:
       type: string
       description: Stable, machine-readable error identifier (never renamed).

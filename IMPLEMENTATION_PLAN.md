@@ -230,17 +230,18 @@ CREATE POLICY tenant_isolation ON app.<t> TO opsgrid_app, opsgrid_worker
 00001 roles_schemas_extensions (btree_gist, pg_trgm, citext) + app.current_org_id()/current_user_id()
 00002 identity: users(issuer,subject unique), sessions
 00003 tenancy: organizations, locations, organization_memberships (policy: user_id = current_user_id() OR org = current_org_id()), organization_counters
-00004 customers, customer_contacts
-00005 sites (composite FK → customers), assets (composite FK → sites)
-00006 technician_profiles (skills text[], home_location_id, color)
-00007 work_orders (number per org UNIQUE(org, number), requested_window tstzrange, priority, status, version, search tsvector GENERATED)
-00008 assignments + CHECK(ends_at > starts_at) + EXCLUDE overlap (overview) + partial UNIQUE(work_order_id) WHERE status IN active
-00009 work_order_notes, attachments
-00010 audit_events (append-only, monthly partitions via pg_partman-free simple scheme: declarative RANGE partitions created by worker job)
-00011 outbox_events + NOTIFY trigger
-00012 idempotency_keys, processed_messages
-00013 report_jobs
-00014 indexes justified by access patterns (each with a comment referencing the query name)
+00004 membership role allowlist expands to include admin (overview §6)
+00005 customers, customer_contacts
+00006 sites (composite FK → customers), assets (composite FK → sites)
+00007 technician_profiles (skills text[], home_location_id, color)
+00008 work_orders (number per org UNIQUE(org, number), requested_window tstzrange, priority, status, version, search tsvector GENERATED)
+00009 assignments + CHECK(ends_at > starts_at) + EXCLUDE overlap (overview) + partial UNIQUE(work_order_id) WHERE status IN active
+00010 work_order_notes, attachments
+00011 audit_events (append-only, monthly partitions via pg_partman-free simple scheme: declarative RANGE partitions created by worker job)
+00012 outbox_events + NOTIFY trigger
+00013 idempotency_keys, processed_messages
+00014 report_jobs
+00015 indexes justified by access patterns (each with a comment referencing the query name)
 ```
 Expand-and-contract is mandatory for changes after Gate 4. CI applies migrations from empty **and** from the previous release's snapshot (§9).
 
@@ -375,7 +376,7 @@ WP: migrations 00002–00003; OIDC BFF (§4.11); sessions; `/v1/me`; org resolut
 **Exit proofs:** the overview's 4 hostile statements as tests; removed member denied on the next request; RLS fail-closed when context is missing (`rls_context_missing` path returns zero rows/denies); runtime role is not owner/BYPASSRLS (schema test); session fixation (ID rotates on login); CSRF cross-site POST rejected.
 
 ### G2 — Core domain (L)
-WP: migrations 00004–00007, 00009 (notes); customers/sites/assets CRUD; work orders with the state machine, audit, per-org numbering; keyset pagination + filters; search; **UX:** Work Orders list, Work Order Detail (header actions from the state machine), Customers/Sites/Assets pages, Create WO dialog (RHF+Zod, Idempotency-Key per intent), skeleton/empty/error states, ⌘K palette (navigate + search).
+WP: migrations 00005–00008, 00010 (notes); customers/sites/assets CRUD; work orders with the state machine, audit, per-org numbering; keyset pagination + filters; search; **UX:** Work Orders list, Work Order Detail (header actions from the state machine), Customers/Sites/Assets pages, Create WO dialog (RHF+Zod, Idempotency-Key per intent), skeleton/empty/error states, ⌘K palette (navigate + search).
 **Exit:** exhaustive + property state-machine tests; composite-FK cross-org insert rejected; every mutation writes audit (an integration test asserts audit rows per command); OpenAPI codegen diff clean; Storybook coverage for all new components.
 
 ### G3 — Scheduling (L) — *first systems showcase*

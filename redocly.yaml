@@ -6,5 +6,5 @@ rules:
   operation-summary: error
   operation-4xx-response: off # covered by the shared `default` problem response
   no-server-example.com: error
-  security-defined: off # authentication arrives in Gate 1
+  security-defined: error
   info-license-strict: off

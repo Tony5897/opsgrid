@@ -1,8 +1,18 @@
-import { LaptopIcon, MoonIcon, Rows3Icon, Rows4Icon, SunIcon, UserIcon } from "lucide-react";
+import { startLogout } from "@opsgrid/api-client";
+import {
+  LaptopIcon,
+  LogOutIcon,
+  MoonIcon,
+  Rows3Icon,
+  Rows4Icon,
+  SunIcon,
+  UserIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -16,7 +26,7 @@ import {
   usePreferences,
 } from "@/lib/preferences";
 
-export function UserMenu() {
+export function UserMenu({ displayName }: { displayName?: string }) {
   const { theme, density } = usePreferences();
   return (
     <DropdownMenu>
@@ -26,6 +36,14 @@ export function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        {displayName ? (
+          <>
+            <DropdownMenuLabel className="truncate font-normal text-text-secondary">
+              {displayName}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         <DropdownMenuLabel>Theme</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={theme}
@@ -54,6 +72,15 @@ export function UserMenu() {
             <Rows4Icon aria-hidden /> Compact
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            void startLogout();
+          }}
+        >
+          <LogOutIcon aria-hidden /> Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

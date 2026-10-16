@@ -10,6 +10,41 @@ export const zMeta = z.object({
     })
 });
 
+export const zMeUser = z.object({
+    id: z.uuid(),
+    email: z.email().nullish(),
+    displayName: z.string()
+});
+
+export const zOrganization = z.object({
+    id: z.uuid(),
+    slug: z.string().max(63).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    name: z.string()
+});
+
+export const zMembershipRole = z.enum([
+    'owner',
+    'admin',
+    'dispatcher',
+    'technician',
+    'viewer'
+]);
+
+export const zMeMembership = z.object({
+    organizationId: z.uuid(),
+    slug: z.string().max(63).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    name: z.string(),
+    role: zMembershipRole,
+    permissions: z.array(z.string()).register(z.globalRegistry, {
+        description: 'Expanded permission strings for this membership\'s role.'
+    })
+});
+
+export const zMe = z.object({
+    user: zMeUser,
+    memberships: z.array(zMeMembership)
+});
+
 /**
  * Stable, machine-readable error identifier (never renamed).
  */
@@ -58,6 +93,29 @@ export const zProblem = z.object({
 });
 
 /**
+ * Organization UUID (not the URL slug used by the SPA).
+ */
+export const zOrgId = z.uuid().register(z.globalRegistry, {
+    description: 'Organization UUID (not the URL slug used by the SPA).'
+});
+
+/**
  * Build information.
  */
 export const zGetMetaResponse = zMeta;
+
+/**
+ * Caller profile.
+ */
+export const zGetMeResponse = zMe;
+
+export const zGetOrganizationPath = z.object({
+    orgId: z.uuid().register(z.globalRegistry, {
+        description: 'Organization UUID (not the URL slug used by the SPA).'
+    })
+});
+
+/**
+ * Organization the caller may access.
+ */
+export const zGetOrganizationResponse = zOrganization;

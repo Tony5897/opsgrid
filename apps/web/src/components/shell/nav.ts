@@ -36,6 +36,8 @@ export interface NavItem {
   /** Gate that delivers this area (shown on placeholders until then). */
   gate: string;
   summary: string;
+  /** When set, hide unless the current membership includes this permission. */
+  permission?: string;
 }
 
 export interface NavSection {
@@ -147,9 +149,19 @@ export const NAV: NavSection[] = [
         icon: ActivityIcon,
         gate: "G6",
         summary: "Queues, outbox lag, dead letters and realtime connections.",
+        permission: "platform.operate",
       },
     ],
   },
 ];
 
 export const ALL_NAV_ITEMS: NavItem[] = NAV.flatMap((s) => s.items);
+
+/** Filter nav sections by the caller's permission strings for the active org. */
+export function filterNav(permissions: readonly string[]): NavSection[] {
+  const allow = new Set(permissions);
+  return NAV.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.permission || allow.has(item.permission)),
+  })).filter((section) => section.items.length > 0);
+}

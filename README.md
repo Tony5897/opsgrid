@@ -2,9 +2,9 @@
 
 A multi-tenant, real-time field-service platform built to explore relational isolation, transactional correctness, asynchronous delivery, realtime synchronization, observability, and production failure handling.
 
-> **Status:** Gate 0 (Foundation) is complete (`gate-0-foundation`). Gate 1 (identity and tenancy) is in progress. Capabilities below name the gate that proves them; the [evidence ledger](docs/evidence/ledger.md) is the authority for what is proven versus still planned.
+> **Status:** Gate 0 (Foundation) is complete (`gate-0-foundation`). Gate 1 (identity and tenancy) is implemented on `main` — BFF sessions, `/v1/me`, org membership gate, authz map, demo seed, and shell UX. The [evidence ledger](docs/evidence/ledger.md) is the authority for what is proven versus still planned; G1 closes in the gate log when its exit proofs are green in CI.
 >
-> Remote GitHub Actions runners are paused while hosted jobs cannot start (account billing lock). Until they return, verify with `make check` — see [Continuous integration](docs/development.md#9-continuous-integration).
+> Hosted GitHub Actions are on; `main` requires the **CI passed** check. Local verify: `make check` / `make test-e2e` — see [Continuous integration](docs/development.md#9-continuous-integration).
 
 ## What it does
 
